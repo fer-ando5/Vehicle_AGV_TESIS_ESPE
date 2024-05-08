@@ -12,12 +12,10 @@ import time
 import json
 import serial
 
-
-
-
 logging.basicConfig(level=logging.INFO)
 
-# Definición de la función principal
+# Funcion para calculas la estimacion de la distancia con respecto del aruco y la camara, se envia el ID objetivo
+#ID objetivo corresponde al que vamos a buscar
 def Estimation(ID_Objetivo):
 
     # Función para verificar si una matriz es una matriz de rotación válida
@@ -94,20 +92,20 @@ def Estimation(ID_Objetivo):
             z = round(realworld_tvec[2],3)
             theta = round(math.degrees(roll),3)
            # Imprimir las coordenadas formateadas
-            coordenadas = [x, y, z, theta]
-            #print(coordenadas)
+            coordenadas = [x, y, z, theta] #guardamos en coordanadas los datos en una lista
+            
             pid = PIDController(0.01, 0.01, 0.1 , 200, 0)
             inicio = False
             if inicio == False:
-                pid.Conectar_Blu_Auto()
+                pid.Conectar_Blu_Auto() #ejecutamos la funcion para conectar el bluetooth
+
+            #Extraemos las velocidades, ingresando las distancias en Z, X y angulo
             velocidad_Z = pid.compute_Z(int(coordenadas[2]))
- 
             velocidad_X = pid.compute_X(int(coordenadas[0]))
-
             angulo = pid.compute_Angulo(int(coordenadas[3]))
+            print("Datos sensados: ",velocidad_X, velocidad_Z, angulo) #Bandera para verificacion de datos computados
 
-            print("Datos sensados: ",velocidad_X, velocidad_Z, angulo)
-            pid.Matriz_transformacion_Motores(velocidad_X, velocidad_Z,angulo)
+            pid.Matriz_transformacion_Motores(velocidad_X, velocidad_Z,angulo) #Envio para transformar las velocidades delantera, frontal y angular a la velocidad para cada rueda
 
             tvec_str = "P x=%2.0f y=%2.0f  z=%2.0f O =%2.0f" % (realworld_tvec[0], realworld_tvec[1],realworld_tvec[2], math.degrees(roll))
             cv2.putText(frame, tvec_str, (20, 460), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2, cv2.LINE_AA)
@@ -125,19 +123,18 @@ def Estimation(ID_Objetivo):
         cv2.imshow('DETECCION DE ARUCO', frame)
 
         key = cv2.waitKey(3) & 0xFF  # Esperar 1 milisegundo para la entrada del teclado
+        
+        ###### Regla para que salga de la funcion cuando se cumpla que la distancia es Z es menor a 200 y en X menor a 10 
         if coordenadas[2] <= 200 and abs(coordenadas[0]) <= 10:
             print("Entro en el if")
-            pid.Matriz_transformacion_Motores(0,0,0)
-            time.sleep(1)
+            pid.Matriz_transformacion_Motores(0,0,0) #Envio de velocidades en 0 para que se detenga el robot
+            time.sleep(1) #Tiempo para la escritura
             cap.release()  # Liberar la captura de vídeo
             cv2.destroyAllWindows()  # Cerrar todas las ventanas
-            bandera_FIN_PID = 1
-            #pid.desconectar()
+            bandera_FIN_PID = 1 # Envio 1 en fin bandera para saber que se termino este proceso y publicar en thingsboard
             return bandera_FIN_PID
     cap.release()  # Liberar la captura de vídeo
     cv2.destroyAllWindows()  # Cerrar todas las ventanas
-
-
 
 
 class PIDController:
@@ -151,20 +148,12 @@ class PIDController:
         self.integral_Z = self.integral_X = 0
 
 
-        self.mqtt_broker = "192.168.0.86"  # Cambiar a la dirección IP de la laptop Lenovo
+        self.mqtt_broker = "192.168.0.86"  # Cambiar a la dirección IP del servidor de thingsboard
         self.mqtt_port = 1883 #puerto de envio de datos para Mqtt
         self.mqtt_topic = "v1/devices/me/telemetry"  
-        '''
-        self.client = mqtt.Client() 
-        token_robot= "NNz7OFhy2WnVm6eDB56x"
-        token_referencia = token_robot
-        self.client.username_pw_set(token_referencia)
-        self.client.connect(self.mqtt_broker, self.mqtt_port, 60)
-        '''
-        #self.connect_to_thingsboard()
 
 
-
+    #Funcion para detemerinar la velocidad del angulo en funcion de que tan lejos esta del angulo que buscamos (PID Rustico)
     def compute_Angulo(self, Angulo):
         print("Esto es angulo: ", Angulo )
 
@@ -188,6 +177,7 @@ class PIDController:
             else :
                 return 0
 
+    ##Funcion para detemerinar la velocidad frontal en funcion de que tan lejos esta del aruco en Z (PID Rustico)
     def compute_Z(self, DisranciaZ):
         print("Esto es distancia z: ", DisranciaZ )
 
@@ -200,48 +190,10 @@ class PIDController:
         else :
             return 0
 
-        '''
-        if DisranciaZ > 2000:
-            velZ = 7
-            print("Esto es velZ: ", velZ )
-            return velZ
-        elif DisranciaZ > 1500:
-            velZ = 6 + (DisranciaZ - 1500) / 500  # Incremento lineal desde 6 a 7
-            print("Esto es velZ: ", velZ )
-            return velZ
-        elif DisranciaZ > 1000:
-            velZ = 5 + (DisranciaZ - 1000) / 500  # Incremento lineal desde 5 a 6
-            print("Esto es velZ: ", velZ )
-            return velZ
-        elif DisranciaZ > 600:
-            velZ = 3 + (DisranciaZ - 600) / 400    # Incremento lineal desde 4 a 5
-            print("Esto es velZ: ", velZ )
-            return velZ
-        elif DisranciaZ > 400:
-            velZ = 2 + (DisranciaZ - 400) / 200    # Incremento lineal desde 3 a 4
-            print("Esto es velZ: ", velZ )
-            return velZ
-        elif DisranciaZ > 200:
-            velZ = 2 + (DisranciaZ - 200) / 200    # Incremento lineal desde 2 a 3
-            return velZ
-        '''
-        
-        '''
-        error = DisranciaZ - self.setpoint_Z
-        self.integral_Z += error
-        derivative = error - self.prev_error_Z
-        self.prev_error_Z = error
-        output = self.kp * error + self.ki * self.integral_Z + self.kd * derivative
-        # Limitar la salida dentro del rango de 0 a 187
-        output = max(min(output, 50), 0)
-        Escalado_Z = output/50
-        return Escalado_Z
-        '''
-
+    ##Funcion para detemerinar la velocidad Lateral en funcion de que tan lejos esta del aruco en X (PID Rustico)
     def compute_X(self, DistanciaX):
 
         print("Esto es distancia x: ", DistanciaX )
-
 
         if DistanciaX >0:
             if DistanciaX > 1000:
@@ -252,7 +204,6 @@ class PIDController:
                 return 0.5
             else:
                 return 0
-            
             
         elif DistanciaX <= 0:
 
@@ -266,75 +217,11 @@ class PIDController:
             else:
                 return 0
 
-            '''
-            if DistanciaX > 2000:
-                VelX = 6
-                print("Esto es vel x: ", VelX )
-                return VelX
-            elif DistanciaX > 1000:
-                VelX = round(5 + (DistanciaX - 1000) / 1000  , 2)
-                return VelX
-            elif DistanciaX > 400:
-                VelX = round(4 + (DistanciaX - 400) / 600 , 2)
 
-                return VelX
-            elif DistanciaX > 100:
-                VelX = round(3 + (DistanciaX - 100) / 300  , 2)
-
-                return VelX
-            elif DistanciaX > 50:
-                VelX = round(2 + (DistanciaX - 50) / 50  , 2)
-    
-                return VelX
-            elif DistanciaX > 10:
-                VelX = round(2 + (DistanciaX - 10) / 40   , 2)
-                return VelX
-        
-        if DistanciaX <0:
-            DismodX = abs(DistanciaX)
-            print("Esto es negativo distancia x", DismodX )
-            if DismodX > 2000:
-                VelX = 6
-                print("Esto es vel x: ", VelX )
-                return -VelX
-            elif DismodX > 1000:
-                VelX = 5 + (DistanciaX - 1000) / 1000  # Incremento lineal desde 6 a 7
-                print("Esto es vel x: ", VelX )
-                return -VelX
-            elif DismodX > 400:
-                VelX = 4 + (DistanciaX - 400) / 600    # Incremento lineal desde 5 a 6
-                print("Esto es vel x: ", VelX )
-                return -VelX
-            elif DismodX > 100:
-                VelX = 3 + (DistanciaX - 100) / 300    # Incremento lineal desde 4 a 5
-                print("Esto es vel x: ", VelX )
-                return -VelX
-            elif DismodX > 50:
-                VelX = 2 + (DistanciaX - 50) / 50      # Incremento lineal desde 3 a 4
-                print("Esto es vel x: ", VelX )
-                return -VelX
-            elif DismodX > 10:
-                VelX = 2 + (DistanciaX - 10) / 40      # Incremento lineal desde 2 a 3
-                print("Esto es vel x: ", VelX )
-                return -VelX
-        '''
-        
-        '''
-        error = abs(valor_X) - self.setpoint_X
-        self.integral_X += error
-        derivative = error - self.prev_error_X
-        self.prev_error_X = error
-        output = self.kp * error + self.ki * self.integral_X + self.kd * derivative
-        # Limitar la salida dentro del rango de 0 a 187
-        Escalado_X = output/50
-        return -Escalado_X if valor_X < 0 else Escalado_X
-        '''
-
-
-
+    #Funcion para determinar la velocidad de cada rueda usando la ecuacion cinametica del ROBOT mecanum de 4 ruedas (Esta ecuacion toma la velocidad: Frontal, lateral y angular)
     def Matriz_transformacion_Motores(self, velocidad_X, velocidad_Z, angulo):
         # Definir las matrices
-        matriz1 = np.array([[1, -1, -0.33],
+        matriz1 = np.array([[1, -1, -0.33], #el valor de -0.33 corresponde a una constante la cual es la suma de la distancia entre los ejes de la rueda y la distancia entre la mitad de la rueda y la mitad del robot
                             [1, 1, 0.33],
                             [1, 1, -0.33],
                             [1, -1, 0.33]])
@@ -345,70 +232,25 @@ class PIDController:
 
         # Multiplicación de matrices
         resultado = np.dot(matriz1, matriz2)
-        resultado_multiplicado = resultado * (1/ 0.05)
-        #resultado_multiplicado =(-1)*resultado_multiplicado 
-
-        # Desempaquetar los valores de la matriz resultante en variables individuales
-        #self.W1, self.W2, self.W3, self.W4 = resultado_multiplicado.flatten()
-        self.W1 = max(min(resultado_multiplicado[0][0], 255), -255)
+        resultado_multiplicado = resultado * (1/ 0.05) #el 0.05 corresponde al radio de la rueda mecanum
+       
+        self.W1 = max(min(resultado_multiplicado[0][0], 255), -255) #Limitamos la salida a 255 y -255
         self.W2 = max(min(resultado_multiplicado[1][0], 255), -255)
         self.W3 = max(min(resultado_multiplicado[2][0], 255), -255)
         self.W4 = max(min(resultado_multiplicado[3][0], 255), -255)
 
 
-        # Imprimir los valores de las variables individuales
+        # Imprimir los valores de las variables individuales para ver que sale xd
         print("Valor de W1:", self.W1)
         print("Valor de W2:", self.W2)
         print("Valor de W3:", self.W3)
         print("Valor de W4:", self.W4)
 
-        self.Enviar_arduino_blu()
+        self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
 
-        
-    '''
-    def Envio_velocidades(self):
-        try: 
-            payload = '{"W1": "' + str(self.W1) + '", "W2": "' + str(self.W2) + '", "W3": "' + str(self.W3) + '", "W4": "' + str(self.W4) + '"}'
-            self.client.publish(self.mqtt_topic, payload, qos=1)
-            time.sleep(0.2)  # Agrega un retraso de 1 segundo antes de desconectar el cliente
-            print("Datos enviados a ThingsBoard correctamente.")
-        except Exception as e:
-            print("Error al enviar datos a ThingsBoard:", e)      
-
-    def __del__(self):
-        # Desconectar el cliente MQTT al destruir la instancia
-        self.client.disconnect()
-    
-    '''
-
-    def on_connect(self, client, userdata, flags, result_code, *extra_params, tb_client):
-        attributes = {"W1": self.W1}
-        if result_code == 0:
-            logging.info("Connected to ThingsBoard!")
-            # Sending attributes
-            result = tb_client.send_attributes(attributes)
-            result.get()
-            #time.sleep(0.1)
-            logging.info("Attribute update sent: " + str(result.rc() == TBPublishInfo.TB_ERR_SUCCESS))
-            #tb_client.disconnect()
-        else:
-            logging.error("Failed to connect to ThingsBoard with result code: %d", result_code)
-        
-
-    def connect_to_thingsboard(self):
-        self.client = TBDeviceMqttClient("192.168.0.86", username="NNz7OFhy2WnVm6eDB56x")
-        
-
-    def Envio_atrbutos_2(self):
-        self.client.connect(callback=self.on_connect)
-
-
-    def desconectar(self):
-        self.client.disconnect()
-
-
+    #Funcion de envio de datos mediante bluetooth
     def Enviar_arduino_blu(self):
-        
+        #data corresponde a un diccionario
         data = {
             "Modo" : "Auto",
             "m1_vel": self.W1,
@@ -422,7 +264,8 @@ class PIDController:
         self.serialArduino.write(json_data.encode())
         time.sleep(0.5)
         pass
-
+    
+    #Funcion para concetar bluetooth mediante el puerto bluetooth de mi pc
     def Conectar_Blu_Auto(self):
         self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         inicio = True
