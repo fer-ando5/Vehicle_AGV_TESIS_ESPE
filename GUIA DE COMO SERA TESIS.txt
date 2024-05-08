@@ -1,0 +1,145 @@
+
+######################################## Al ejecutarse el codigo se vera la interfaz grafica ###########################################
+#### Se tendra 2 modos de funcionamiento #####
+
+######################################### MODO Automatico ######################################################
+#En el modo automatico se iniciara una interfaz grafica con 3 botones y se mostraran dos video:
+#Video A = sera el video de la camara ESP
+#videbo B = sera el video del celular 
+#####Procesos al precionar el boton Inicio#####
+
+#1.-Primero validaresmo si existe una caja para iniciar el movimiento y retornara un valor de si existe o no caja
+Existe_caja=Validacion_Caja_Mesa()
+
+#2.-Se enviara el atributo a thingsboard de que existe una caja para la activacion del robot, sin retornar nada 
+enviaratributosROBOTencender(Existe_caja)
+
+#3.-Con la activacion y en dato almacenado en la variable Existe_caja, ordenamos dar un giro de 90 grados 
+Giro_Robot(90 grados)
+
+#4.-Empezamos a buscar el aruco ID que necesitamos y almacenamos en una varible ObjetivoAruco
+ArucoMesa = 1 (El nombre de la etiqueta del aruco para este ejemplo)
+ObjetivoAruco = Identificar_ID_Aruco(ArucoMesa)
+
+#5.-Con el valor de ObjetivoAruco sacamos todos los datos de posicion de ese aruco y los almacenamos para realizar el PID y retornara el valor de llegada
+Llegada_Aruco = Movilizacion_PID(ObjetivoAruco)
+
+#6.-Con la Llegada_Aruco iniciamos el envia a thingsboard del dato para empezar el PID del aproximamiento final
+enviaratributos_AproximamientoFinal(Llegada_Aruco)
+
+(((((((((Inicia el proceso dentro de la ESP8266)))))))))
+    Inicio del movimeinto hacia adelante del robot
+    Realiza el PID con el sensor de presencia ultrasonico
+    Envia el dato de que ah llegado al final
+((((((((((Fin del proceso dentro de la ESP8266))))))))))
+
+#7.-Mientras escuchamos cada 2 seg hasta que se presete el dato en thingsboard de fin del proceso de aproximacion final
+Termino_Aprox_Final = Estado_aporx_Final()
+
+#8.-Iniciamos el PID del actuador para la elevacion, mediante el movimeinto de 20 grados en el servo 
+Mover_servo(20 grados)
+ArucoMesa2 = 2 (el aruco que estara en la msea en la parte superior)
+ /////////remplazamos en nuestra variable objetivo actuador para el PID del actuador ////////////
+ObjetivoAruco_actuador = Identificar_ID_Aruco(ArucoMesa2)
+
+#9.-Con el valor de cuanto debemos subir el actuador empieza el movmiento
+Llegada_actuador = Movilizacion_PID_actuador()
+
+#10.-Con la llegada del actuador iniciamos el movimiento del motor NEMA para ello debemos publicar el dato en thingsboard
+enviaratributos_Encender_nema(Llegada_actuador)
+
+(((((((((Inicia el proceso dentro de la ESP8266)))))))))
+    Inicio del movimeinto hacia adelante del NEMA
+    cuando el nema active el final de carrera 
+    Se activara el electroiman 
+    (espera lo necesario para que se active y se pegue a la caja )
+    Inicia el movimiento de retroseso del NEMA
+    Presiona el final de carrera
+    (Esto nos dice que la caja se encuentra abordo)
+    Envia el dato de que el final de carrea se activo, es decir la caja esta abordo
+((((((((((Fin del proceso dentro de la ESP8266))))))))))
+
+#11.-Se mueve el servo apuntando la camara hacia abajo para leer el QR y obtener hacia donde se dirije
+Mover_servo(hacia abajo)
+
+#12.-Inicia la funcion de lector Aruco despues que el servo haya bajado
+QR_leido = Lector_QRaruco()
+
+#13.-Decodificamos el QR_leido y enviamos los datos a thingsboard ademas de asignar el aruco objetivo
+enviaratributos_QR_obtenidos(QR_leido)
+Aruco_enviar_caja = (Aruco_Qr)
+
+#11.-Inicia movimiento de descenso del actuador 
+Bajar_actuador()
+
+#12.-Da un giro de 180 grados para buscar el aruco objetivo
+Giro_Robot(180 grados)
+
+ACONTINUACION SE REUTILIZA EL CODIGO YA QUE ES EL MISMO PROCESO SIN EMBARGO SE PONE LOS NUMEROS DE ACCION 
+
+    #13.-Identificamos los IDs de los arucos 
+    ObjetivoAruco = Identificar_ID_Aruco(Aruco_enviar_caja)
+
+    #14.-Enviamos al PID para que de el movimiento de aproximacion
+    Llegada_Aruco = Movilizacion_PID(ObjetivoAruco)
+
+    #15.-Con la Llegada_Aruco iniciamos el envia a thingsboard del dato para empezar el PID del aproximamiento final
+    enviaratributos_AproximamientoFinal(Llegada_Aruco)
+
+    (((((((((Inicia el proceso dentro de la ESP8266)))))))))
+        Inicio del movimeinto hacia adelante del robot
+        Realiza el PID con el sensor de presencia ultrasonico
+        Envia el dato de que ah llegado al final
+    ((((((((((Fin del proceso dentro de la ESP8266))))))))))
+
+    #16.-Mientras escuchamos cada 2 seg hasta que se presete el dato en thingsboard de fin del proceso de aproximacion final
+    Termino_Aprox_Final = Estado_aporx_Final()
+
+    #17.-Iniciamos el PID del actuador para la elevacion, mediante el movimeinto de 20 grados en el servo 
+    Mover_servo(20 grados)
+    ArucoMesa2 = 2 (el aruco que estara en la msea en la parte superior)
+    /////////remplazamos en nuestra variable objetivo actuador para el PID del actuador ////////////
+    ObjetivoAruco_actuador = Identificar_ID_Aruco(ArucoMesa2)
+
+    #18.-Con el valor de cuanto debemos subir el actuador empieza el movmiento
+    Llegada_actuador = Movilizacion_PID_actuador()
+
+    #19.-Con la llegada del actuador iniciamos el movimiento del motor NEMA para ello debemos publicar el dato en thingsboard
+    enviaratributos_Encender_nema(Llegada_actuador)
+
+    (((((((((Inicia el proceso dentro de la ESP8266)))))))))
+        Inicio del movimeinto hacia adelante del NEMA
+        cuando el nema active el final de carrera 
+        Se descativa el electroiman 
+        (espera lo necesario para que se active y se pegue a la caja )
+        Inicia el movimiento de retroseso del NEMA
+        Presiona el final de carrera
+        (Esto nos dice que la caja se encuentra abordo)
+        Envia el dato de que el final de carrea se activo, es decir la caja esta abordo
+    ((((((((((Fin del proceso dentro de la ESP8266))))))))))
+
+#20.-Se envia un mensaje a thingsboard que se termino el procecso 
+enviaratributos_Findeproceso(Se dejo la caja en el lugar correcto)
+
+#21.-Retroceder 30 centimetros
+Retroceder_Robot(30 centimetros)
+
+#22.-Girar hasta que vea el aruco home y lo ponga como aruco objetivo para que vaya a HOME
+Giro_Robot()
+ObjetivoAruco = Identificar_ID_Aruco(HOME)
+
+#23.-Realizamos la movilizacion del robot para que llegue a HOME reutilizando codigo anterior
+Llegada_Aruco = Movilizacion_PID(ObjetivoAruco) 
+
+#24.-Envio de bandera de Robot en HOME
+enviaratributos_Robot_Home(HOME)
+
+######################################### MODO Manual #########################################################
+
+
+
+
+$$$$$$$$$$$$$$$$$$$$$$$ FUNCIONES A SER LLAMADAS $$$$$$$$$$$$$$$$$$$$$$$$$
+Validacion_Caja_Mesa()
+enviaratributosROBOTencender()
+Giro_Robot( dato de giro)
