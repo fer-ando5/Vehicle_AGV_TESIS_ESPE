@@ -11,14 +11,11 @@ from io import BytesIO
 import threading
 import time
 
-import Tesis_FUNCIONES
 import Tesis_Funciones_Version
-import lectoraruco 
 import IdentificadorIdAruco
 
 
 import cv2
-import lectoraruco
 import Aruco_Medicion_Distancia
 
 import serial
@@ -80,42 +77,36 @@ class VentanaAutomatico:
 
     #Funcion al procesar el boton de inicio
     def Validaciones_Inicio(self):
-        funciones_complementarias = Tesis_Funciones_Version.Funciones_Complementarias()
-        print("#############################################")
+        funciones_complementarias = Tesis_Funciones_Version.Funciones_Complementarias() #Inicializamos el fichero de tesis funciones version complementarias
         print("Inicia el proceso de validaciones_Inicio")
-        #self.Existe_caja=Tesis_FUNCIONES.Validacion_Caja_Mesa()
-        self.Existe_caja = funciones_complementarias.Validaion_Caja_Mesa()
+        self.Existe_caja = funciones_complementarias.Validaion_Caja_Mesa() #Funcion para la validacion de la caja
         print(self.Existe_caja)
         time.sleep(2)
         if self.Existe_caja == 0:
             message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
-            # Mostrar el cuadro de advertencia
+            # Mostrar el cuadro de advertencia de inicio de movimiento del robot
             messagebox.showwarning("Advertencia", message, icon="warning", parent=self.master)
             print("Detectamos caja y pasamos a enviar atributos")
-            funciones_complementarias.Enviar_atributos("Robot","Inicio",True)
+            funciones_complementarias.Enviar_atributos("Robot","Inicio",True) #Enviamos los atributos a thingsboard sobre que el tema Inicio con el atributo TRUE para llevar el monitoreo en thingsboard
             self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot")  # Actualiza el texto del Label
-            Objetivo_Aruco = 1
-            Verificador_Aruco = False
+            Objetivo_Aruco = 1 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
+            Verificador_Aruco = False #Inicializamos verificacion aruco en false
             while Verificador_Aruco == False:
                 print("Entro en el while para buscar el aruco")
-                Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco)
+                Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
             print("Salio del while para buscar el aruco")
-            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco)
+            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion
 
 
-            funciones_complementarias.Enviar_atributos("Robot","Inicio",False)
-        elif self.Existe_caja == 1:
+            funciones_complementarias.Enviar_atributos("Robot","Inicio",False) #Al final del proceso enviamos False para el monitoreo y decir que se finalizo el proceso de clasificacion de la caja
+        elif self.Existe_caja == 1: #Si no existe la caja se ejecuta esta funcion y se muestra un mensaje de alerta
             print("No existe Caja")
             self.label_estado.config(text="NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO")  # Actualiza el texto del Label
             funciones_complementarias.Enviar_atributos("Robot","Inicio",False)
             messagebox.showwarning("Advertencia", "NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO", icon="warning", parent=self.master)
             
-            
-            #return(self.Existe_caja)
         
-        #Desactivamos el robot
-        
-
+#Funcion para identificar los arucos y buscar el aruvo objetivo a ser buscado
     def Aruco(self, Buscar):
         marker_size = 100
         # Obtener el diccionario de marcadores ArUco y los parámetros del detector
@@ -138,28 +129,26 @@ class VentanaAutomatico:
             if marker_ids is not None:
                 # Añadir los IDs de los marcadores detectados a la lista
                 for id in marker_ids.flatten():
-                    if id not in detected_ids:
+                    if id not in detected_ids: #Compara los arucos
                         detected_ids.add(id)
-                        if Buscar != id:
-                            self.Girar()
-                        if Buscar == id:
-                            self.Inicio_Pid()
-                            Verificador_Aruco = True
+                        if Buscar != id: # si el aruco que se agrega no es el objetivo se ejecuta la funcion Girar la cual mantiene girando al robot hasta que encuentre el aruco objetivo
+                            self.Girar() #Funcion de girar el robot
+                        if Buscar == id: #Cuando el aruco objetivo es encontrado 
+
+                            Verificador_Aruco = True #Asiganamos el valor de true para decir que si se encontro el aruco objetivo
                             data = {
-                                "Modo" : str("Quieto"),
+                                "Modo" : str("Quieto"), #Detenemos al robot
                                 }
                             # Convertir el diccionario a una cadena JSON
                             json_data = json.dumps(data)
                             # Enviar la cadena JSON a Arduino a través del puerto serie
                             self.serialArduino.write(json_data.encode())
-
                             time.sleep(1)
-
-                            self.serialArduino.close()
+                            self.serialArduino.close() # Cerramos el envio de datos bluetooth
                             time.sleep(0.5)
-                            cap.release()
+                            cap.release() 
                             cv2.destroyAllWindows()
-                            return Verificador_Aruco , id
+                            return Verificador_Aruco , id 
                 # Dibujar los marcadores en el fotograma
                 cv2.aruco.drawDetectedMarkers(frame, marker_corners, marker_ids)
             
@@ -194,12 +183,6 @@ class VentanaAutomatico:
         # Enviar la cadena JSON a Arduino a través del puerto serie
         self.serialArduino.write(json_data.encode())
         pass
-
-    def Inicio_Pid(self):
-        print("Eniciamos el PID")
-        pass
-
-
 
 ########################################################## MODO MANUAL ################################################################################
 
