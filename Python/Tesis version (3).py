@@ -39,7 +39,9 @@ class VentanaAutomatico:
         alto_pantalla = master.winfo_screenheight()
         # Crear la instancia de Tk
         
-        self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial("/dev/tty.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        
         self.velocidad = 30
 
         # Crear la instancia de la clase VentanaAutomatico y pasarle la instancia de Tk
@@ -192,7 +194,8 @@ class VentanaManual:
         master.title("Ventana de Modo Manual Iniciada")
         self.master.geometry("900x700")
         # Aquí colocas el código para la ventana de modo manual
-        self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial("/dev/tty.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         master.title("Ventana de Modo Manual Iniciada")
         #Titulo=tk.Label(VenManual,text="Modo Manual")
         #Titulo.pack()
