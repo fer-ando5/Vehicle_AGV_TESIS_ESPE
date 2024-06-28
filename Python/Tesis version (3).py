@@ -5,7 +5,6 @@
 # 
 from tkinter import messagebox
 import tkinter as tk
-
 from tkinter import ttk
 from tkinter import Label
 from tkinter import Scale
@@ -16,6 +15,7 @@ import requests
 from io import BytesIO
 import threading
 import time
+import os
 
 import Tesis_Funciones_Version
 import IdentificadorIdAruco
@@ -197,100 +197,313 @@ class VentanaAutomatico:
 class VentanaManual:
     def __init__(self, master):
         self.master = master
-        master.title("Ventana de Modo Manual Iniciada")
-        self.master.geometry("900x700")
-        # Aquí colocas el código para la ventana de modo manual
+        master.overrideredirect(True)
+        self.master.geometry("1366x768")
+        self.master.resizable(width=False, height=False)
         # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         self.serialArduino = serial.Serial("/dev/tty.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         master.title("Ventana de Modo Manual Iniciada")
         #Titulo=tk.Label(VenManual,text="Modo Manual")
-        #Titulo.pack()
-        
         # Obtener el ancho y alto de la pantalla
         ancho_pantalla = master.winfo_screenwidth()
-        alto_pantalla = master.winfo_screenheight()
+        alto_pantalla = master.winfo_screenheight() 
 
         # Calcular las coordenadas para centrar la ventana
-        x = (ancho_pantalla - 900) // 2  # 900 es el ancho de la ventana
-        y = (alto_pantalla - 750) // 2   # 700 es el alto de la ventana
+        x = (ancho_pantalla - 1366) // 2  # 900 es el ancho de la ventana
+        y = (alto_pantalla - 768) // 2   # 700 es el alto de la ventana
 
         # Establecer la posición de la ventana
-        master.geometry(f"900x700+{x}+{y}")
+        master.geometry(f"1366x768+{x}+{y}")
         
         self.velocidad = 50
 
-        # Crear el título que abarca toda la parte superior
-        titulo = tk.Label(master, text="MODO MANUAL", font=("Arial", 16))
-        titulo.pack(fill=tk.X)  # Se extiende horizontalmente
+        # Definir el tamaño deseado de la imagen
+        width, height = 120, 100
 
-        # Crear el frame izquierdo para contener los botones
-        self.area_izquierda = tk.Frame(master)
-        self.area_izquierda.pack(side=tk.LEFT, padx=10, pady=10)  # Se adhiere a la izquierda, con espacio exterior
+        # Obtener el directorio base del archivo actual
+        ruta_base = os.path.dirname(__file__)
+
+        # Construir las rutas relativas a las imágenes
+        ruta_imagen_logo_universidad = os.path.join(ruta_base, 'HMI', 'Logo_U.png')
+        ruta_imagen_logo_carrera = os.path.join(ruta_base, 'HMI', 'Logo_M.png')
+
+        # Cargar la imagen del logo de la universidad
+        imagen_logo_universidad = Image.open(ruta_imagen_logo_universidad)
+        imagen_logo_universidad_resized = imagen_logo_universidad.resize((width, height), Image.LANCZOS)
+        imagen_logo_universidad_tk = ImageTk.PhotoImage(imagen_logo_universidad_resized)
+
+        # Cargar la imagen del logo de la carrera
+        imagen_logo_carrera = Image.open(ruta_imagen_logo_carrera)
+        imagen_logo_carrera_resized = imagen_logo_carrera.resize((width, height), Image.LANCZOS)
+        imagen_logo_carrera_tk = ImageTk.PhotoImage(imagen_logo_carrera_resized)
+
+        # Crear un frame para contener las imágenes y el texto
+        frame_contenedor = tk.Frame(master)
+        frame_contenedor.pack(fill='x')
+
+        # Mostrar el logo de la universidad
+        label_logo_universidad = tk.Label(frame_contenedor,image=imagen_logo_universidad_tk)
+        label_logo_universidad.image = imagen_logo_universidad_tk
+        label_logo_universidad.pack(side=tk.LEFT, padx=(20, 0), pady=10, anchor='w')
+
+        # Mostrar el logo de la carrera
+        label_logo_carrera = tk.Label(frame_contenedor,image=imagen_logo_carrera_tk)
+        label_logo_carrera.image = imagen_logo_carrera_tk
+        label_logo_carrera.pack(side=tk.RIGHT, padx=(0, 20), pady=10, anchor='e')
+
+        # Mostrar el texto
+        texto = "UNIVERSIDAD DE LAS FUERZAS ARMADAS ESPE-L \n\nSISTEMA DE NAVEGACION AUTONOMA \n\nCONTROL DE MANDO: MANUAL"
+        label_texto = tk.Label(frame_contenedor, text=texto, font=("Arial", 14, "bold"))
+        label_texto.pack(side=tk.LEFT, expand=True, fill="both", padx=(10, 0), pady=10, anchor='center')
+
+        ####################################################  FRAME TOTAL  #####################################################
+        self.Total = tk.Frame(master)
+        self.Total.pack(padx=5) 
+        ####################################################  SUBFRAME CENTRAL  #####################################################
+
+        #Crear subframe central izquierdo 
+        self.centro_izquierdo = tk.Frame(self.Total)
+        self.centro_izquierdo.grid(row=0,column=0,padx=20,sticky='nsew')  # Se adhiere a la izquierda, con espacio exterior
+        #Crear el subframe 1
+        self.Posicion1 = tk.Frame(self.centro_izquierdo)
+        self.Posicion1.grid(row=0,column=0,padx=5,sticky='nsew')
+        Label(self.Posicion1, text = "CONTROL DE MOVIMIENTO", font=("Arial", 12, "bold") ).grid(row=0, column=0,columnspan=3,pady=10,sticky='w')
         Valto = 1
         Vancho = 5
-        # Botones en el área izquierda
-        self.boton1 = tk.Button(self.area_izquierda, text="↖",font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton1.grid(row=0, column=0, padx=5, pady=5)  # Colocar en la fila 0, columna 0, con espacio exterior
-        self.boton1.bind("<Button-1>", self.Diagonal_Superior_IZQ)
+        #Crear botones para el control de movimiento manual 
+        self.boton1 = tk.Button(self.Posicion1,text="⬉", font=("Arial",20,"bold"),width=3)
+        self.boton1.grid(row=1,column=0,padx=5,pady=5,sticky='nsew')
+        self.boton1.bind("<Button-1>",self.Diagonal_Superior_IZQ)
         self.boton1.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton2 = tk.Button(self.area_izquierda, text="↑",font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton2.grid(row=0, column=1, padx=5, pady=5)  # Colocar en la fila 0, columna 1, con espacio exterior
+        self.boton2 = tk.Button(self.Posicion1,text="⬆",font=("Arial",20,"bold"),width=3)
+        self.boton2.grid(row=1,column=1,padx=5,pady=5,sticky='nsew') 
         self.boton2.bind("<Button-1>", self.Adelante)
         self.boton2.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton3 = tk.Button(self.area_izquierda, text="↗", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton3.grid(row=0, column=2, padx=5, pady=5)  # Colocar en la fila 0, columna 2, con espacio exterior
+        self.boton3 = tk.Button(self.Posicion1,text="⬈", font=("Arial",20,"bold"),width=3)
+        self.boton3.grid(row=1,column=2,padx=5,pady=5,sticky='nsew') 
         self.boton3.bind("<Button-1>", self.Diagonal_Superior_DER)
         self.boton3.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton4 = tk.Button(self.area_izquierda, text="←", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton4.grid(row=1, column=0, padx=5, pady=5)  # Colocar en la fila 1, columna 0, con espacio exterior
+        self.boton4 = tk.Button(self.Posicion1, text="⬅", font=("Arial",20, "bold"),width=3)
+        self.boton4.grid(row=2,column=0,padx=5,pady=5,sticky='nsew')
         self.boton4.bind("<Button-1>", self.Izquierda)
         self.boton4.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton5 = tk.Button(self.area_izquierda, text="HOME",width=12, height=3)
-        self.boton5.grid(row=1, column=1, padx=5, pady=5)  # Colocar en la fila 1, columna 1, con espacio exterior
-
-        self.boton5.bind("<ButtonRelease-1>", self.soltar_boton1)
-
-        self.boton6 = tk.Button(self.area_izquierda, text="→", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton6.grid(row=1, column=2, padx=5, pady=5)  # Colocar en la fila 1, columna 2, con espacio exterior
+        self.boton6 = tk.Button(self.Posicion1, text="⮕", font=("Arial",20, "bold"),width=3)
+        self.boton6.grid(row=2,column=2,padx=5,pady=5,sticky='nsew')  
         self.boton6.bind("<Button-1>", self.Derecha)
         self.boton6.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton7 = tk.Button(self.area_izquierda, text="↙", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton7.grid(row=2, column=0, padx=5, pady=5)  # Colocar en la fila 2, columna 0, con espacio exterior
-        self.boton7.bind("<Button-1>", self.Diagonal_Inferior_IZQ)
-        self.boton7.bind("<ButtonRelease-1>", self.soltar_boton1)
+        self.boton7 = tk.Button(self.Posicion1,text="⬋",font=("Arial",20,"bold"),width=3)
+        self.boton7.grid(row=3,column=0,padx=5,pady=5,sticky='nsew')
+        self.boton7.bind("<Button-1>",self.Diagonal_Inferior_IZQ)
+        self.boton7.bind("<ButtonRelease-1>",self.soltar_boton1)
 
-        self.boton8 = tk.Button(self.area_izquierda, text="↓", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton8.grid(row=2, column=1, padx=5, pady=5)  # Colocar en la fila 2, columna 1, con espacio exterior
+        self.boton8 = tk.Button(self.Posicion1, text="⬇",font=("Arial",20, "bold"),width=3)
+        self.boton8.grid(row=3,column=1,padx=5,pady=5,sticky='nsew') 
         self.boton8.bind("<Button-1>", self.Atras)
         self.boton8.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton9 = tk.Button(self.area_izquierda, text="↘", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton9.grid(row=2, column=2, padx=5, pady=5)  # Colocar en la fila 2, columna 2, con espacio exterior
-        self.boton9.bind("<Button-1>", self.Diagonal_Inferior_DER)
-        self.boton9.bind("<ButtonRelease-1>", self.soltar_boton1)
+        self.boton9 = tk.Button(self.Posicion1, text="⬊",font=("Arial",20, "bold"),width=3)
+        self.boton9.grid(row=3,column=2,padx=5,pady=5,sticky='nsew')  
+        self.boton9.bind("<Button-1>",self.Diagonal_Inferior_DER)
+        self.boton9.bind("<ButtonRelease-1>",self.soltar_boton1)
 
-        self.boton10 = tk.Button(self.area_izquierda, text="↺", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton10.grid(row=3, column=0, padx=5, pady=5)  # Colocar en la fila 3, columna 0, con espacio exterior
+        self.boton10 = tk.Button(self.Posicion1, text="⟲",font=("Arial",20, "bold"),width=3)
+        self.boton10.grid(row=4,column=0,padx=5,pady=5,sticky='nsew')  
         self.boton10.bind("<Button-1>", self.Giro_Antihorario)
         self.boton10.bind("<ButtonRelease-1>", self.soltar_boton1)
 
-        self.boton11 = tk.Button(self.area_izquierda, text="↻", font=("Arial", 20),width=Vancho, height=Valto)
-        self.boton11.grid(row=3, column=2, padx=5, pady=5)  # Colocar en la fila 3, columna 1, con espacio exterior
+        self.boton11 = tk.Button(self.Posicion1, text="⟳",font=("Arial",20, "bold"),width=3)
+        self.boton11.grid(row=4,column=2,padx=5,pady=5,sticky='nsew')  
         self.boton11.bind("<Button-1>", self.Giro_Horario)
         self.boton11.bind("<ButtonRelease-1>", self.soltar_boton1)
+        
+        #Crear el subframe 2
+        self.Posicion2 = tk.Frame(self.centro_izquierdo)
+        self.Posicion2.grid(row=1,column=0,padx=5,pady=10,sticky='nsew')
+        Label(self.Posicion2, text = "LECTURA DE SENSORES", font=("Arial", 12, "bold") ).grid(row=0,column=0,columnspan=3,pady=10,sticky='w')
 
-        self.boton12 = tk.Button(self.area_izquierda, text="Regresar",command=abrir_ventana_principal_manual, width=12, height=2)
-        self.boton12.grid(row=5, column=0, padx=5, pady=5)  # Colocar en la fila 4, columna 0, con espacio exterior
-        self.boton12.bind("<ButtonRelease-1>", self.soltar_boton1)
+        #Crear boton para medir la distancia con los sensores ultrasonicos
+        self.boton22 = tk.Button(self.Posicion2, text="MEDIR",font=("Arial", 10, "bold"), width=10,height=Valto, command=self.Leer_Datos)
+        self.boton22.grid(row=1,column=0,sticky='w')
 
-        self.boton13 = tk.Button(self.area_izquierda, text="Salir", command=VenManual.quit, width=12, height=2)
-        self.boton13.grid(row=5, column=2, padx=5, pady=5)  # Colocar en la fila 4, columna 1, con espacio exterior
-        self.boton13.bind("<ButtonRelease-1>", self.soltar_boton1)
+        Label(self.Posicion2, text = "ULTRASONICO 1:", font=("Arial",10, "bold")).grid(row=2,column=0,sticky='w')
+
+        # Crear una caja de texto
+        self.caja1 = Text(self.Posicion2, wrap=tk.WORD, width=7, height=1, font=("Arial", 12))
+        self.caja1.grid(row=2,column=1,pady=10)
+
+        Label(self.Posicion2,text = "ULTRASONICO 2:", font=("Arial", 10, "bold")).grid(row=3,column=0,sticky='w')
+
+        # Crear una caja de texto
+        self.caja2 = Text(self.Posicion2, wrap=tk.WORD, width=7, height=1, font=("Arial", 12))
+        self.caja2.grid(row=3,column=1,pady=10)
+
+        ############################################################################################################################################
+        
+        #Crear subframe central centro
+        self.centro_centro = tk.Frame(self.Total)
+        self.centro_centro.grid(row=0,column=1,sticky='nsew') 
+        Label(self.centro_centro, text = "VIDEO EN TIEMPO REAL", font=("Arial", 12, "bold") ).grid(row=0, column=0,columnspan=3,padx=5,pady=10,sticky='w')
+        
+        #Crear un suframe para mostrar el video de la cámara
+        self.Posicion3 = tk.Frame(self.centro_centro)
+        self.Posicion3.grid(row=1,column=0,columnspan=4,padx=10,sticky='nsew')
+
+        #Crear el label dentro del subframe donde se mostrara la camra
+        self.canvas_camara = tk.Canvas(self.Posicion3,bg="white",relief="flat",width=640,height=400)
+        self.canvas_camara.pack(fill="both",expand=True)
+
+        #Crear el frame para los botones de abrir y cerrar la cámara
+        self.Posicion4 = tk.Frame(self.centro_centro)
+        self.Posicion4.grid(row=2,column=0,pady=10)
+
+        #Aqui se crea el label para seleccionar la camara 
+        Label(self.Posicion4, text = "CAMARA:",font=("Arial", 10, "bold") ).grid(row=0,column=0,pady=10,sticky='w')
+
+        #Crear el menu desplegable
+        self.camaras = ["NINGUNA","SUPERIOR","INFERIOR"]
+        self.valor0 = tk.StringVar()
+        self.valor0.set(self.camaras[0]) 
+        self.drop=tk.OptionMenu(self.Posicion4,self.valor0,*self.camaras)
+        self.drop.config(width=10)
+        self.drop.grid(row=0,column=1)
+        self.drop['font'] = ('Arial', 10, 'bold')
+
+        # Añadir un botón para abrir y cerrar la cámara en el frame de botones
+        self.boton14 = tk.Button(self.Posicion4,text="ABRIR", font=("Arial", 10, "bold"),width=10, height=1, command=self.abrir_camara)
+        self.boton14.grid(row=0,column=2,padx=10,sticky='w')
+
+        self.boton15 = tk.Button(self.Posicion4,text="CERRAR", font=("Arial", 10, "bold"),width=10, height=1,command=self.cerrar_camara)
+        self.boton15.grid(row=1,column=2,padx=10,sticky='w')
+
+        self.cap = None
+
+        #Label para el control del microservo
+        Label(self.Posicion4, text = "CONTROL DEL MICROSERVO",font=("Arial",12,"bold")).grid(row=0,column=3,columnspan=3,padx=20,pady=10,sticky='w')
+
+        #Crear un slider para controlar la rotacion de un microservo
+        self.slider = Scale(self.Posicion4,from_=0, to = 90, orient = HORIZONTAL, command = self.angle, length = 300,showvalue=True, tickinterval=10)
+        self.slider.grid(row=1,column=3,columnspan=3,padx=20)
+        #########################################################################################################################################################
+
+        #Crear subframe central derecho 
+        self.centro_derecho = tk.Frame(self.Total)
+        self.centro_derecho.grid(row=0,column=2,sticky='nsew') 
+
+        # Crear un frame para el control de la posicion vertical
+        self.Posicion6 = tk.Frame(self.centro_derecho)
+        self.Posicion6.grid(row=1,column=0,pady=10,sticky='nsew')
+        Label(self.Posicion6,text = "CONTROL DE POSICION VERTICAL",font=("Arial", 12, "bold") ).grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
+
+        #Crear un frame para el menu desplegable
+        self.Posicion9 = tk.Frame(self.Posicion6)
+        self.Posicion9.grid(row=1,column=0,pady=10,sticky='nsew')
+
+        #Crear un label para seleccionar el nivel al que tiene que elevarce 
+        label1 = Label(self.Posicion9,text = "SELECCIONE EL NIVEL", font=("Arial",10,"bold"))
+        label1.grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
+        self.niveles = ["NINGUNA","PISO A1","PISO A2","PISO A3"]
+        self.valor = tk.StringVar()
+        self.valor.set(self.niveles[0]) 
+        self.drop=tk.OptionMenu(self.Posicion9,self.valor,*self.niveles)
+        self.drop.config(width=10)
+        self.drop.grid(row=1,column=0,columnspan=2)
+        self.drop['font'] = ('Arial', 10, 'bold')
+
+        self.Posicion10 = tk.Frame(self.Posicion6)
+        self.Posicion10.grid(row=1,column=1,pady=10,sticky='nsew')
+
+        #Crear boton para subir las tijeretas
+        self.boton16 = tk.Button(self.Posicion10, text="SUBIR", font=("Arial", 10, "bold"), width=10,height=Valto, command=self.Subir_Tijereta)
+        self.boton16.grid(row=0,column=0,padx=10,pady=10)
+        self.canvas1= tk.Canvas(self.Posicion10,width=50,height=50) #Crear canvas para el LED 
+        self.canvas1.grid(row=0,column=1)
+        self.led_subir = self.canvas1.create_oval(10,10,40,40,fill="gray")
+
+        #Crear boton para bajar las tijeretas
+        self.boton17 = tk.Button(self.Posicion10, text="BAJAR", font=("Arial", 10, "bold"), width=10, height=Valto, command=self.Bajar_Tijereta)
+        self.boton17.grid(row=1,column=0,padx=10,pady=10)
+        self.canvas2= tk.Canvas(self.Posicion10,width=50,height=50)
+        self.canvas2.grid(row=1,column=1)
+        self.led_bajar = self.canvas2.create_oval(10,10,40,40,fill="gray")
+
+        #Crear boton para detener las tijeretas
+        self.boton18 = tk.Button(self.Posicion10,text="DETENER", font=("Arial", 10, "bold"), width=10, height=Valto, command=self.Detener_Tijereta)
+        self.boton18.grid(row=2,column=0,padx=10,pady=10)
+        self.canvas3= tk.Canvas(self.Posicion10, width=50,height=50)
+        self.canvas3.grid(row=2,column=1)
+        self.led_detener = self.canvas3.create_oval(10,10,40,40,fill="gray")
+
+        #Crear frame para el movimiento lineal de la corredera
+        self.Posicion7 = tk.Frame(self.centro_derecho)
+        self.Posicion7.grid(row=2,column=0,pady=0,sticky='nsew')
+        Label(self.Posicion7,text = "CONTROL DEL SISTEMA LINEAL", font=("Arial", 12, "bold") ).grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
+
+        #Crear boton para hacer avanzar el sistema lineal  
+        self.boton19 = tk.Button(self.Posicion7, text="AVANZAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Subir_Tijereta)
+        self.boton19.grid(row=1,column=0,padx=(0,10),pady=10,sticky='e')
+        self.canvas4 = tk.Canvas(self.Posicion7,width=50,height=50)
+        self.canvas4.grid(row=1,column=1,sticky='w')
+        self.led_1 = self.canvas4.create_oval(10,10,40,40,fill="gray")
+    
+        #Crear boton para hacer detener el sistema lineal  
+        self.boton20 = tk.Button(self.Posicion7, text="DETENER", font=("Arial", 10, "bold"), width=10,height=1,command=self.Subir_Tijereta)
+        self.boton20.grid(row=3,column=0,padx=(0,10),pady=10,sticky='e')
+        self.canvas5= tk.Canvas(self.Posicion7,width=50, height=50)
+        self.canvas5.grid(row=3,column=1,sticky='w')
+        self.led_2 = self.canvas5.create_oval(10,10,40,40,fill="gray")
+
+        #Crear boton para hacer regresar el sistema de movimiento
+        self.boton21 = tk.Button(self.Posicion7,text="REGRESAR", font=("Arial", 10, "bold"), width=10,height=1,command=self.Bajar_Tijereta)
+        self.boton21.grid(row=2,column=0,padx=(0,10),pady=10,sticky='e')
+        self.canvas6= tk.Canvas(self.Posicion7,width=50,height=50)
+        self.canvas6.grid(row=2,column=1,sticky='w')
+        self.led_3 = self.canvas6.create_oval(10,10,40,40,fill="gray")
+
+        #Crear el Frame para el control de el electroiman 
+        self.Posicion8 = tk.Frame(self.centro_derecho)
+        self.Posicion8.grid(row=3,column=0,pady=10,sticky='nsew')
+        Label(self.Posicion8,text = "CONTROL DEL ELECTROIMAN", font=("Arial", 12,"bold") ).grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
+        
+        #Crear boton para encender el electroiman 
+        self.boton22 = tk.Button(self.Posicion8, text="ENCENDER", font=("Arial", 10, "bold"), width=10, height=1, command=self.Bajar_Tijereta)
+        self.boton22.grid(row=1,column=0,padx=(10,10),pady=10,sticky='e')
+
+        #Crear boton para apagar el electroiman 
+        self.boton23 = tk.Button(self.Posicion8, text="APAGAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Bajar_Tijereta)
+        self.boton23.grid(row=2,column=0,padx=(10,10),pady=10,sticky='e')
+
+        #Crear Canvas para el LED para encender
+        self.canvas6= tk.Canvas(self.Posicion8, width=50, height=50)
+        self.canvas6.grid(row=1,column=1,sticky='w')
+        self.led_encender = self.canvas6.create_oval(10,10,40,40, fill="gray")
+
+        #Crear Canvas para el LED para apagar
+        self.canvas6= tk.Canvas(self.Posicion8, width=50, height=50)
+        self.canvas6.grid(row=2,column=1,sticky='w')
+        self.led_encender = self.canvas6.create_oval(10,10,40,40, fill="gray")
+
+        ######################################################################################################3
+        #Crear un frame para regresar y salir del modo de manod manual 
+        self.Menu_Inferior  = tk.Frame(self.Total)
+        self.Menu_Inferior.grid(row=1,column=0,columnspan=3,sticky='ew')
+
+        # Configurar las columnas del Frame para que se expandan
+        self.Menu_Inferior.columnconfigure(0, weight=1)
+        self.Menu_Inferior.columnconfigure(1, weight=1)
+        self.Menu_Inferior.columnconfigure(2, weight=1)
+
+        self.boton12 = tk.Button(self.Menu_Inferior, text="REGRESAR",font=("Arial", 10, "bold"),width=10, height=Valto,command=abrir_ventana_principal_manual)
+        self.boton12.grid(row=0,column=0,padx=20,sticky='nw')  # Colocar en la fila 4, columna 0, con espacio exterior
+        self.boton12.bind("<ButtonRelease-1>",self.soltar_boton1)
+
+        self.boton13 = tk.Button(self.Menu_Inferior, text="SALIR",font=("Arial", 10, "bold"),width=10,height=Valto,command=VenManual.quit)
+        self.boton13.grid(row=0,column=2,padx=20,sticky='ne')  # Colocar en la fila 4, columna 1, con espacio exterior
+        self.boton13.bind("<ButtonRelease-1>",self.soltar_boton1)
 
 ############ Funciones de modo manual
 
