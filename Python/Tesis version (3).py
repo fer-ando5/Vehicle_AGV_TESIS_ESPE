@@ -200,10 +200,10 @@ class VentanaManual:
         master.overrideredirect(True)
         self.master.geometry("1366x768")
         self.master.resizable(width=False, height=False)
-        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
-        self.serialArduino = serial.Serial("/dev/tty.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # Aquí colocas el código para la ventana de modo manual
+        self.serialArduino = serial.Serial("COM7", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         master.title("Ventana de Modo Manual Iniciada")
-        #Titulo=tk.Label(VenManual,text="Modo Manual")
+
         # Obtener el ancho y alto de la pantalla
         ancho_pantalla = master.winfo_screenwidth()
         alto_pantalla = master.winfo_screenheight() 
@@ -444,21 +444,21 @@ class VentanaManual:
         Label(self.Posicion7,text = "CONTROL DEL SISTEMA LINEAL", font=("Arial", 12, "bold") ).grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
 
         #Crear boton para hacer avanzar el sistema lineal  
-        self.boton19 = tk.Button(self.Posicion7, text="AVANZAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Subir_Tijereta)
+        self.boton19 = tk.Button(self.Posicion7, text="AVANZAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Avanzar)
         self.boton19.grid(row=1,column=0,padx=(0,10),pady=10,sticky='e')
         self.canvas4 = tk.Canvas(self.Posicion7,width=50,height=50)
         self.canvas4.grid(row=1,column=1,sticky='w')
         self.led_1 = self.canvas4.create_oval(10,10,40,40,fill="gray")
     
         #Crear boton para hacer detener el sistema lineal  
-        self.boton20 = tk.Button(self.Posicion7, text="DETENER", font=("Arial", 10, "bold"), width=10,height=1,command=self.Subir_Tijereta)
+        self.boton20 = tk.Button(self.Posicion7, text="DETENER", font=("Arial", 10, "bold"), width=10,height=1,command=self.Detener)
         self.boton20.grid(row=3,column=0,padx=(0,10),pady=10,sticky='e')
         self.canvas5= tk.Canvas(self.Posicion7,width=50, height=50)
         self.canvas5.grid(row=3,column=1,sticky='w')
         self.led_2 = self.canvas5.create_oval(10,10,40,40,fill="gray")
 
         #Crear boton para hacer regresar el sistema de movimiento
-        self.boton21 = tk.Button(self.Posicion7,text="REGRESAR", font=("Arial", 10, "bold"), width=10,height=1,command=self.Bajar_Tijereta)
+        self.boton21 = tk.Button(self.Posicion7,text="REGRESAR", font=("Arial", 10, "bold"), width=10,height=1,command=self.Regresar)
         self.boton21.grid(row=2,column=0,padx=(0,10),pady=10,sticky='e')
         self.canvas6= tk.Canvas(self.Posicion7,width=50,height=50)
         self.canvas6.grid(row=2,column=1,sticky='w')
@@ -470,24 +470,24 @@ class VentanaManual:
         Label(self.Posicion8,text = "CONTROL DEL ELECTROIMAN", font=("Arial", 12,"bold") ).grid(row=0,column=0,columnspan=2,padx=20,sticky='w')
         
         #Crear boton para encender el electroiman 
-        self.boton22 = tk.Button(self.Posicion8, text="ENCENDER", font=("Arial", 10, "bold"), width=10, height=1, command=self.Bajar_Tijereta)
+        self.boton22 = tk.Button(self.Posicion8, text="ENCENDER", font=("Arial", 10, "bold"), width=10, height=1, command=self.Encender)
         self.boton22.grid(row=1,column=0,padx=(10,10),pady=10,sticky='e')
 
         #Crear boton para apagar el electroiman 
-        self.boton23 = tk.Button(self.Posicion8, text="APAGAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Bajar_Tijereta)
+        self.boton23 = tk.Button(self.Posicion8, text="APAGAR", font=("Arial", 10, "bold"), width=10, height=1, command=self.Apagar)
         self.boton23.grid(row=2,column=0,padx=(10,10),pady=10,sticky='e')
 
         #Crear Canvas para el LED para encender
-        self.canvas6= tk.Canvas(self.Posicion8, width=50, height=50)
-        self.canvas6.grid(row=1,column=1,sticky='w')
-        self.led_encender = self.canvas6.create_oval(10,10,40,40, fill="gray")
+        self.canvas7= tk.Canvas(self.Posicion8, width=50, height=50)
+        self.canvas7.grid(row=1,column=1,sticky='w')
+        self.led_encender = self.canvas7.create_oval(10,10,40,40, fill="gray")
 
         #Crear Canvas para el LED para apagar
-        self.canvas6= tk.Canvas(self.Posicion8, width=50, height=50)
-        self.canvas6.grid(row=2,column=1,sticky='w')
-        self.led_encender = self.canvas6.create_oval(10,10,40,40, fill="gray")
+        self.canvas8= tk.Canvas(self.Posicion8, width=50, height=50)
+        self.canvas8.grid(row=2,column=1,sticky='w')
+        self.led_apagar = self.canvas8.create_oval(10,10,40,40, fill="gray")
+        ######################################################################################################
 
-        ######################################################################################################3
         #Crear un frame para regresar y salir del modo de manod manual 
         self.Menu_Inferior  = tk.Frame(self.Total)
         self.Menu_Inferior.grid(row=1,column=0,columnspan=3,sticky='ew')
@@ -505,7 +505,8 @@ class VentanaManual:
         self.boton13.grid(row=0,column=2,padx=20,sticky='ne')  # Colocar en la fila 4, columna 1, con espacio exterior
         self.boton13.bind("<ButtonRelease-1>",self.soltar_boton1)
 
-############ Funciones de modo manual
+############################################ FUNCIONES DE MODO MANUAL ##################################################
+
     def Giro_Horario(self, event):
         data = {
             "Modo" : "Manual",
@@ -636,75 +637,187 @@ class VentanaManual:
         self.serialArduino.write(json_data.encode())
         pass
     ############################################################################################################
+    
     def abrir_camara(self):
+        # Inicialización de la bandera para controlar si una acción está en proceso
+        self.accion_en_proceso = getattr(self, 'accion_en_proceso', False)
+        
+        if self.accion_en_proceso:
+            return  # Si hay una acción en proceso, salir sin hacer nada
+        
         if self.valor0.get() == self.camaras[1]:
-            self.cap = cv2.VideoCapture(0) #definir el puerto de apertura de la camara superior
+            self.cap = cv2.VideoCapture(0)  # definir el puerto de apertura de la camara superior
         elif self.valor0.get() == self.camaras[2]:
-            self.cap = cv2.VideoCapture(1) #definir el puerto de apertura de la camara inferior
+            self.cap = cv2.VideoCapture(1)  # definir el puerto de apertura de la camara inferior
 
         if self.cap is not None and self.cap.isOpened():
+            self.accion_en_proceso = True
             self.update_frame()
 
     def cerrar_camara(self):
+        # Inicialización de la bandera para controlar si una acción está en proceso
+        self.accion_en_proceso = getattr(self, 'accion_en_proceso', False)
+        
         if self.cap:
             self.cap.release()
             self.cap = None
-            self.canvas_camara.delete('all') # Eliminar todos los elementos dibujados en el Canvas
+            self.canvas_camara.delete('all')  # Eliminar todos los elementos dibujados en el Canvas
+            self.accion_en_proceso = False
 
     def update_frame(self):
+        # Inicialización de la bandera para controlar si una acción está en proceso
+        self.accion_en_proceso = getattr(self, 'accion_en_proceso', False)
+        
         if self.cap:
             ret, frame = self.cap.read()
             if ret:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(frame)
                 imgtk = ImageTk.PhotoImage(image=img)
-                self.canvas_camara.create_image(0,0,anchor=tk.NW,image=imgtk)
+                self.canvas_camara.create_image(0, 0, anchor=tk.NW, image=imgtk)
                 self.canvas_camara.imgtk = imgtk
-        
         self.centro_centro.after(10, self.update_frame)
 
     def close(self):
         self.cerrar_camara()
-        self.centro_centro.destroy()
-    ###################################################################################################################33
+        self.centro_centro.destroy
+    ###################################################################################################################
+    
+    def Estado(self, comando, led_a_encender):
+        if not hasattr(self, 'ultimo_comando'):
+            self.ultimo_comando = None
+        
+        if not hasattr(self, 'accion'):
+            self.accion = False
+        
+        if comando == self.ultimo_comando:
+            print(f"Ignorando acción de {comando.lower()} porque ya está en proceso.")
+            return  # Ignorar la acción si es la misma que la anterior
+        
+        if hasattr(self, 'accion_en_proceso') and self.accion and (
+            (comando == "SUBIR" and self.ultimo_comando == "BAJAR") or 
+            (comando == "BAJAR" and self.ultimo_comando == "SUBIR")
+        ):
+            print(f"Ignorando acción de {comando.lower()} porque se está en proceso de {self.ultimo_comando.lower()}.")
+            return  # Ignorar la acción si está en proceso de una acción opuesta
+        
+        self.ultimo_comando = comando
+        self.accion = comando != "DETENER"
+        piso = self.valor.get()  # Asumiendo que tienes self.valor definido correctamente
+        if piso != "NINGUNA":
+            # Asumiendo que tienes definidos correctamente canvas1, canvas2, canvas3, led_subir, led_bajar, led_detener
+            self.canvas1.itemconfig(self.led_subir, fill="#00FF00" if led_a_encender == "subir" else "gray")
+            self.canvas2.itemconfig(self.led_bajar, fill="#00FF00" if led_a_encender == "bajar" else "gray")
+            self.canvas3.itemconfig(self.led_detener, fill="#FFFF00" if led_a_encender == "detener" else "gray")
+            self.enviar_datos(comando)
+            self.master.after(5000, self.resetear_leds)
+    
     def Subir_Tijereta(self):
-        self.canvas1.itemconfig(self.led_subir, fill="#00FF00")
-        self.canvas2.itemconfig(self.led_bajar, fill="gray")
-        self.canvas3.itemconfig(self.led_detener, fill="gray")
-        self.enviar_datos("SUBIR")
-
+        self.Estado("SUBIR", "subir")
+    
     def Detener_Tijereta(self):
-        self.canvas1.itemconfig(self.led_subir, fill="gray")
-        self.canvas2.itemconfig(self.led_bajar, fill="gray")
-        self.canvas3.itemconfig(self.led_detener, fill="#FFFF00")
-        self.enviar_datos("DETENER")
-
+        self.Estado("DETENER", "detener")
+    
     def Bajar_Tijereta(self):
-        self.canvas1.itemconfig(self.led_subir, fill="gray")
-        self.canvas2.itemconfig(self.led_bajar, fill="#00FF00")
-        self.canvas3.itemconfig(self.led_detener, fill="gray")
-        self.enviar_datos("BAJAR")
-
+        self.Estado("BAJAR", "bajar")
+    
     def enviar_datos(self, movimiento):
-        piso = self.valor.get()
-        if piso in self.niveles:
+        piso = self.valor.get()  # Asumiendo que tienes self.valor definido correctamente
+        if piso in self.niveles:  # Asumiendo que tienes self.niveles definido correctamente
             data = {
                 "Modo": "Manual",
                 "Dato_movimiento": movimiento,
                 "Nivel": piso
             }
             json_data = json.dumps(data)
+            print(f"Enviando datos: {json_data}")
+            # Asumiendo que tienes self.serialArduino definido correctamente
             self.serialArduino.write(json_data.encode())
-            print(json_data)
-            pass
+    
+    def resetear_leds(self):
+        # Asumiendo que tienes definidos correctamente canvas1, canvas2, canvas3, led_subir, led_bajar, led_detener
+        self.canvas1.itemconfig(self.led_subir, fill="gray")
+        self.canvas2.itemconfig(self.led_bajar, fill="gray")
+        self.canvas3.itemconfig(self.led_detener, fill="gray")
+        self.accion_en_proceso = False
+        self.ultimo_comando = None 
+    #########################################################################################
+    
+    def control_led(self, comando, led_canvas, led_index):
+        leds = [self.led_1, self.led_2, self.led_3]
+        for i, led in enumerate(leds):
+            canvas = getattr(self, f'canvas{i + 4}')
+            color = "#00FF00" if i == led_index else "gray"
+            canvas.itemconfig(led, fill=color)
+        
+        if not hasattr(self, 'ultimo_control'):  # Verificar si es la primera vez que se llama a control_led
+            self.ultimo_control = None
+        
+        if comando != self.ultimo_control:  # Verificar si es un comando diferente al último enviado
+            self.enviar_datos2(comando)
+            self.ultimo_control = comando  # Actualizar el último comando enviado
 
+    def Avanzar(self):
+        self.control_led("avanzar", self.canvas4, 0)
 
+    def Detener(self):
+        self.control_led("detener", self.canvas5, 1)
 
+    def Regresar(self):
+        self.control_led("regresar", self.canvas6, 2)
 
+    def enviar_datos2(self, control):
+        data = {
+            "Modo": "Manual",
+            "Dato_movimiento": control
+        }
+        json_data = json.dumps(data)
+        print(f"Enviando datos: {json_data}")  # Mensaje de depuración
+        self.serialArduino.write(json_data.encode())
+    ####################################################################################################
+
+    def control_led1(self,comando1,led_canvas, led_index1):
+        leds1 = [self.led_encender, self.led_apagar]
+        for i, led1 in enumerate(leds1):
+            canvas = getattr(self, f'canvas{i + 7}')
+            color = "#00FF00" if i == led_index1 else "gray"
+            canvas.itemconfig(led1, fill=color)
+        
+        if not hasattr(self, 'ultimo_control'):  # Verificar si es la primera vez que se llama a control_led
+            self.ultimo_control = None
+        
+        if comando1 != self.ultimo_control:  # Verificar si es un comando diferente al último enviado
+            self.enviar_datos3(comando1)
+            self.ultimo_control = comando1  # Actualizar el último comando enviado
+
+    def Encender(self):
+        self.control_led1("encender", self.canvas7, 0)
+    
+    def Apagar(self):
+        self.control_led1("apagar", self.canvas8, 1)
+    
+    def enviar_datos3(self,estado):
+        data = {
+            "Modo": "Manual",
+            "Dato_movimiento": estado
+        }
+        json_data = json.dumps(data)
+        print(f"Enviando datos: {json_data}")
+        self.serialArduino.write(json_data.encode())
+        pass
+    ####################################################################################################
 
     def angle(self, init):
         angleData = str(self.slider.get())
-        print(angleData)
+        self.enviar_datos4(angleData)
+
+    def enviar_datos4(self,Angulo):
+        data = {
+            "Modo": "Manual",
+            "Dato_movimiento": Angulo
+        }
+        json_data = json.dumps(data)
+        self.serialArduino.write(json_data.encode())
         pass
 
     def Leer_Datos(self):
