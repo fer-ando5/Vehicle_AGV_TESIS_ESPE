@@ -5,6 +5,12 @@
 # 
 from tkinter import messagebox
 import tkinter as tk
+
+from tkinter import ttk
+from tkinter import Label
+from tkinter import Scale
+from tkinter import Text
+from tkinter import HORIZONTAL
 from PIL import Image, ImageTk
 import requests
 from io import BytesIO
