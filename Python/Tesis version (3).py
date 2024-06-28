@@ -506,7 +506,6 @@ class VentanaManual:
         self.boton13.bind("<ButtonRelease-1>",self.soltar_boton1)
 
 ############ Funciones de modo manual
-
     def Giro_Horario(self, event):
         data = {
             "Modo" : "Manual",
@@ -636,7 +635,88 @@ class VentanaManual:
         # Enviar la cadena JSON a Arduino a través del puerto serie
         self.serialArduino.write(json_data.encode())
         pass
+    ############################################################################################################
+    def abrir_camara(self):
+        if self.valor0.get() == self.camaras[1]:
+            self.cap = cv2.VideoCapture(0) #definir el puerto de apertura de la camara superior
+        elif self.valor0.get() == self.camaras[2]:
+            self.cap = cv2.VideoCapture(1) #definir el puerto de apertura de la camara inferior
 
+        if self.cap is not None and self.cap.isOpened():
+            self.update_frame()
+
+    def cerrar_camara(self):
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+            self.canvas_camara.delete('all') # Eliminar todos los elementos dibujados en el Canvas
+
+    def update_frame(self):
+        if self.cap:
+            ret, frame = self.cap.read()
+            if ret:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame)
+                imgtk = ImageTk.PhotoImage(image=img)
+                self.canvas_camara.create_image(0,0,anchor=tk.NW,image=imgtk)
+                self.canvas_camara.imgtk = imgtk
+        
+        self.centro_centro.after(10, self.update_frame)
+
+    def close(self):
+        self.cerrar_camara()
+        self.centro_centro.destroy()
+    ###################################################################################################################33
+    def Subir_Tijereta(self):
+        self.canvas1.itemconfig(self.led_subir, fill="#00FF00")
+        self.canvas2.itemconfig(self.led_bajar, fill="gray")
+        self.canvas3.itemconfig(self.led_detener, fill="gray")
+        self.enviar_datos("SUBIR")
+
+    def Detener_Tijereta(self):
+        self.canvas1.itemconfig(self.led_subir, fill="gray")
+        self.canvas2.itemconfig(self.led_bajar, fill="gray")
+        self.canvas3.itemconfig(self.led_detener, fill="#FFFF00")
+        self.enviar_datos("DETENER")
+
+    def Bajar_Tijereta(self):
+        self.canvas1.itemconfig(self.led_subir, fill="gray")
+        self.canvas2.itemconfig(self.led_bajar, fill="#00FF00")
+        self.canvas3.itemconfig(self.led_detener, fill="gray")
+        self.enviar_datos("BAJAR")
+
+    def enviar_datos(self, movimiento):
+        piso = self.valor.get()
+        if piso in self.niveles:
+            data = {
+                "Modo": "Manual",
+                "Dato_movimiento": movimiento,
+                "Nivel": piso
+            }
+            json_data = json.dumps(data)
+            self.serialArduino.write(json_data.encode())
+            print(json_data)
+            pass
+
+
+
+
+
+    def angle(self, init):
+        angleData = str(self.slider.get())
+        print(angleData)
+        pass
+
+    def Leer_Datos(self):
+        data = {
+            "Modo" : "Manual",
+            "Dato_movimiento": "Leer",
+            }
+        # Convertir el diccionario a una cadena JSON
+        json_data = json.dumps(data)
+        # Enviar la cadena JSON a Arduino a través del puerto serie
+        self.serialArduino.write(json_data.encode())
+        pass
 
 ########################################################## Ventana Principal ################################################################################
 
