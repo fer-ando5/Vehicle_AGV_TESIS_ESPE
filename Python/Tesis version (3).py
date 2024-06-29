@@ -853,48 +853,89 @@ def ventana_manual():
     ventana.withdraw()
     VenManual = tk.Toplevel()
     app = VentanaManual(VenManual)
-
+def leer_imagen(path,size):
+    return ImageTk.PhotoImage(Image.open(path).resize(size, Image.LANCZOS))
+def centrar_ventana(ventana,ancho,largo):
+    pantalla_ancho = ventana.winfo_screenwidth()
+    pantalla_largo = ventana.winfo_screenheight()
+    x = int((pantalla_ancho/2)-(ancho/2))
+    y = int((pantalla_largo/2)-(largo/2))
+    return ventana.geometry(f"{ancho}x{largo}+{x}+{y}")
 # Crear la ventana principal
 ventana = tk.Tk()
-ventana.geometry("600x350")
 ventana.title("Ventana de Inicio")
+w,h = ventana.winfo_screenwidth(), ventana.winfo_screenheight()
+ventana.geometry("%dx%d+0+0"%(w,h))
+ventana.resizable(width=0,height=0)
+centrar_ventana(ventana,800,500)
+# Crear un Frame del mismo tamaño que la ventana
+frame = tk.Frame(ventana)
+frame.place(x=0,y=0,relwidth=1,relheight=1)
+# Dividir el frame en dos subframes
+frame_left = tk.Frame(frame,bd=0,width=400,bg='white')
+frame_right = tk.Frame(frame,bd=0,width=400,bg='white')
 
-# Obtener el ancho y alto de la pantalla
-ancho_pantalla = ventana.winfo_screenwidth()
-alto_pantalla = ventana.winfo_screenheight()
+frame_left.pack(side='left', expand=True, fill=tk.BOTH)
+frame_right.pack(side='right', expand=True, fill=tk.BOTH)
 
-# Calcular las coordenadas para centrar la ventana
-x = (ancho_pantalla - 600) // 2  # 600 es el ancho de la ventana
-y = (alto_pantalla - 400) // 2   # 350 es el alto de la ventana
+# Dividir el frame_derecha en dos subframes
+frame_right_top = tk.Frame(frame_right,height=105, width=400, bg='white')
+frame_right_bottom = tk.Frame(frame_right,height=400, width=400)
 
-# Establecer la posición de la ventana
-ventana.geometry(f"600x350+{x}+{y}")
+frame_right_top.pack(side='top', expand=True, fill=tk.BOTH)
+frame_right_bottom.pack(side='bottom', expand=True, fill=tk.BOTH)
+######################################## FRAME IZQUIERDO ##############################################
+ruta_logo = "./HMI/Venture.png"
+logo = leer_imagen(ruta_logo,(400,500))
+# Crear un widget Label y asignarle la imagen
+label_left = tk.Label(frame_left,image=logo)
+label_left.place(x=0,y=0,relwidth=1,relheight=1)
+####################################### FRAME DERECHO ##################################################
+################################# SUBFRAME DERECHO SUPERIOR ############################################
+path_logo = "./HMI/ESPE.png"
+logo1 = leer_imagen(path_logo,(400,101))
+title = tk.Label(frame_right_top,image=logo1)
+title.place(relx=0.5, rely=0, anchor='n',relwidth=1, relheight=1)
 
+################################# SUBFRAME DERECHO INFERIOR ############################################
+Presentacion = "PROYECTO DE TITULACIÓN"
+title2 = tk.Label(frame_right_bottom, text=Presentacion, font=("Arial", 12, "bold"))
+title2.place(relx=0.5,rely=0,anchor='n')
+Presentacion1 = "SISTEMA DE NAVEGACIÓN AUTÓNOMA"
+title5 = tk.Label(frame_right_bottom, text=Presentacion1, font=("Arial", 12, "bold"))
+title5.place(relx=0.5,rely=0.07,anchor='n')
+Autores = "AUTORES: PINTA DIEGO"
+title3 = tk.Label(frame_right_bottom, text=Autores, font=("Arial", 12, "bold"), anchor='w',justify='left')
+title3.place(relx=0.55,rely=0.18,anchor='e')
+Autores1 = "TORRES JAIRO"
+title6 = tk.Label(frame_right_bottom, text=Autores1, font=("Arial", 12, "bold"), anchor='w',justify='left')
+title6.place(relx=0.59,rely=0.25,anchor='e')
 
-etiqueta = tk.Label(ventana, text="Universidad de las Fuerzas Armadas ESPE Sede Latacunga", font=("Arial", 14), width=17, height=3)
-etiqueta.pack(fill=tk.X, expand=True)  # Centrar verticalmente la etiqueta
+Mando = "CONTROL DE MANDO"
+title4 = tk.Label(frame_right_bottom, text=Mando, font=("Arial", 12, "bold"))
+title4.place(relx=0.5,rely=0.35,anchor='e')
 
-etiqueta2 = tk.Label(ventana, text="Ingenieria Mecatrónica", font=("Arial", 14), width=17, height=3)
-etiqueta2.pack(fill=tk.X, expand=True)  # Centrar verticalmente la etiqueta
+# Crear un Frame para los botones
+frame_botones = tk.Frame(frame_right_bottom)
+frame_botones.place(relx=0.5,rely=0.38, anchor='n')
 
-
-# Crear un frame para contener los botones
-Area_botones = tk.Frame(ventana)
-Area_botones.pack(pady=10)
-
-# Botón "Modo Automatico"
-boton_auto = tk.Button(Area_botones, text="Modo Automatico", command=ventana_automatico, width=17, height=3)
-boton_auto.pack(side=tk.TOP, pady=5)
+# Botón "Modo Automático"
+ruta1 = "./HMI/Automatico.png"
+logo2 = leer_imagen(ruta1,(40,35))
+boton_auto = tk.Button(frame_botones,image=logo2,text="AUTOMÁTICO",font=("Arial", 10, "bold"),command=ventana_automatico,compound="left",padx=10,width=130)
+boton_auto.pack(pady=10) 
 
 # Botón "Modo Manual"
-boton_manual = tk.Button(Area_botones, text="Modo Manual", command=ventana_manual, width=17, height=3)
-boton_manual.pack(side=tk.TOP, pady=5)
+ruta2 = "./HMI/Manual.png"
+logo3 = leer_imagen(ruta2,(40,35))
+boton_manual = tk.Button(frame_botones,image=logo3,text="MANUAL", font=("Arial", 10, "bold"),command=ventana_manual,compound="left",padx=10,width=130)
+boton_manual.pack(pady=(10,50))
 
 # Botón "Salir"
-boton_salir = tk.Button(Area_botones, text="Salir del Programa", command=ventana.quit, width=17, height=3)
-boton_salir.pack(side=tk.TOP, pady=5)
-
-
+ruta3 = "./HMI/Salir.png"
+logo4 = leer_imagen(ruta3,(40,30))
+boton_salir = tk.Button(frame_right_bottom,image=logo4,text="SALIR",font=("Arial", 10, "bold"),command=ventana.quit,compound="left",padx=5,width=110)
+boton_salir.place(relx=1.0, rely=1.0, anchor='se', x=-20, y=-20)
 
 ventana.mainloop()
 
