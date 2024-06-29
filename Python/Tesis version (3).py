@@ -853,8 +853,10 @@ def ventana_manual():
     ventana.withdraw()
     VenManual = tk.Toplevel()
     app = VentanaManual(VenManual)
+
 def leer_imagen(path,size):
     return ImageTk.PhotoImage(Image.open(path).resize(size, Image.LANCZOS))
+
 def centrar_ventana(ventana,ancho,largo):
     pantalla_ancho = ventana.winfo_screenwidth()
     pantalla_largo = ventana.winfo_screenheight()
@@ -884,15 +886,18 @@ frame_right_bottom = tk.Frame(frame_right,height=400, width=400)
 
 frame_right_top.pack(side='top', expand=True, fill=tk.BOTH)
 frame_right_bottom.pack(side='bottom', expand=True, fill=tk.BOTH)
+#######################################################################################################
+#Obtener la ruta del directorio actual
+dir = os.path.dirname(__file__)
 ######################################## FRAME IZQUIERDO ##############################################
-ruta_logo = "./HMI/Venture.png"
+ruta_logo = os.path.join(dir,'HMI','Venture.png')
 logo = leer_imagen(ruta_logo,(400,500))
 # Crear un widget Label y asignarle la imagen
 label_left = tk.Label(frame_left,image=logo)
 label_left.place(x=0,y=0,relwidth=1,relheight=1)
 ####################################### FRAME DERECHO ##################################################
 ################################# SUBFRAME DERECHO SUPERIOR ############################################
-path_logo = "./HMI/ESPE.png"
+path_logo = os.path.join(dir,'HMI','ESPE.png')
 logo1 = leer_imagen(path_logo,(400,101))
 title = tk.Label(frame_right_top,image=logo1)
 title.place(relx=0.5, rely=0, anchor='n',relwidth=1, relheight=1)
@@ -920,19 +925,19 @@ frame_botones = tk.Frame(frame_right_bottom)
 frame_botones.place(relx=0.5,rely=0.38, anchor='n')
 
 # Botón "Modo Automático"
-ruta1 = "./HMI/Automatico.png"
+ruta1 = os.path.join(dir,'HMI','Automatico.png')
 logo2 = leer_imagen(ruta1,(40,35))
 boton_auto = tk.Button(frame_botones,image=logo2,text="AUTOMÁTICO",font=("Arial", 10, "bold"),command=ventana_automatico,compound="left",padx=10,width=130)
 boton_auto.pack(pady=10) 
 
 # Botón "Modo Manual"
-ruta2 = "./HMI/Manual.png"
+ruta2 = os.path.join(dir,'HMI','Manual.png')
 logo3 = leer_imagen(ruta2,(40,35))
 boton_manual = tk.Button(frame_botones,image=logo3,text="MANUAL", font=("Arial", 10, "bold"),command=ventana_manual,compound="left",padx=10,width=130)
 boton_manual.pack(pady=(10,50))
 
 # Botón "Salir"
-ruta3 = "./HMI/Salir.png"
+ruta3 = os.path.join(dir,'HMI','Salir.png')
 logo4 = leer_imagen(ruta3,(40,30))
 boton_salir = tk.Button(frame_right_bottom,image=logo4,text="SALIR",font=("Arial", 10, "bold"),command=ventana.quit,compound="left",padx=5,width=110)
 boton_salir.place(relx=1.0, rely=1.0, anchor='se', x=-20, y=-20)
