@@ -217,38 +217,27 @@ class VentanaManual:
         
         self.velocidad = 50
 
-        # Definir el tamaño deseado de la imagen
-        width, height = 120, 100
-
-        # Obtener el directorio base del archivo actual
-        ruta_base = os.path.dirname(__file__)
-
         # Construir las rutas relativas a las imágenes
-        ruta_imagen_logo_universidad = os.path.join(ruta_base, 'HMI', 'Logo_U.png')
-        ruta_imagen_logo_carrera = os.path.join(ruta_base, 'HMI', 'Logo_M.png')
+        path_logo_U = os.path.join(dir, 'HMI', 'Logo_U.png')
+        path_logo_C = os.path.join(dir, 'HMI', 'Logo_M.png')
 
         # Cargar la imagen del logo de la universidad
-        imagen_logo_universidad = Image.open(ruta_imagen_logo_universidad)
-        imagen_logo_universidad_resized = imagen_logo_universidad.resize((width, height), Image.LANCZOS)
-        imagen_logo_universidad_tk = ImageTk.PhotoImage(imagen_logo_universidad_resized)
-
+        imagen_U = leer_imagen(path_logo_U,(120,100))
         # Cargar la imagen del logo de la carrera
-        imagen_logo_carrera = Image.open(ruta_imagen_logo_carrera)
-        imagen_logo_carrera_resized = imagen_logo_carrera.resize((width, height), Image.LANCZOS)
-        imagen_logo_carrera_tk = ImageTk.PhotoImage(imagen_logo_carrera_resized)
+        imagen_C = leer_imagen(path_logo_C,(120,100))
 
         # Crear un frame para contener las imágenes y el texto
         frame_contenedor = tk.Frame(master)
         frame_contenedor.pack(fill='x')
 
         # Mostrar el logo de la universidad
-        label_logo_universidad = tk.Label(frame_contenedor,image=imagen_logo_universidad_tk)
-        label_logo_universidad.image = imagen_logo_universidad_tk
+        label_logo_universidad = tk.Label(frame_contenedor,image=imagen_U)
+        label_logo_universidad.image = imagen_U
         label_logo_universidad.pack(side=tk.LEFT, padx=(20, 0), pady=10, anchor='w')
 
         # Mostrar el logo de la carrera
-        label_logo_carrera = tk.Label(frame_contenedor,image=imagen_logo_carrera_tk)
-        label_logo_carrera.image = imagen_logo_carrera_tk
+        label_logo_carrera = tk.Label(frame_contenedor,image=imagen_C)
+        label_logo_carrera.image = imagen_C
         label_logo_carrera.pack(side=tk.RIGHT, padx=(0, 20), pady=10, anchor='e')
 
         # Mostrar el texto
