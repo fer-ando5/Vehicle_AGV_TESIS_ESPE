@@ -6,20 +6,6 @@ Servo myServo;  // Crea un objeto Servo
 
 StaticJsonDocument<200> doc;
 
-//SoftwareSerial BTSerial(19, 18);
-
-// int M1_Dir = 53;
-// int M1_Vel = 2;
-
-// int M2_Dir = 51;
-// int M2_Vel = 3;
-
-// int M3_Dir = 49;
-// int M3_Vel = 4;
-
-// int M4_Dir = 47;
-// int M4_Vel = 5;
-
 ///////// SERIAL /////////////
 
 String strT = "";
