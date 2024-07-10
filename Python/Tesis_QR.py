@@ -8,7 +8,7 @@ import cv2
 from pyzbar.pyzbar import decode
 import numpy as np
 
-diccionarioCiudades={"AM": "Ambato","QU": "Quito","GU": "Guayakill"}
+diccionarioCiudades={"AM": "Ambato","QU": "Quito","GU": "Guayaquil"}
 diccionarioNombres={"JT": "Jairo Torres","DP":"Diego Pinta","AM":"Angie Macias"}
 diccionariocedulas={"0354":"1803645447","5045":"1150574517","0092":"2200189278"}
 
@@ -19,7 +19,8 @@ class App:
         self.window.title(window_title)
 
         # URL de la cámara IP
-        self.video_source = 'http://192.168.0.85/640x480.jpg'
+        # self.video_source = 'http://192.168.0.85/640x480.jpg'
+        self.video_source = 'http://192.168.255.85/640x480.jpg'
 
         # Tamaño deseado del lienzo
         self.canvas_width = 800

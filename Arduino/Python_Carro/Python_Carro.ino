@@ -1,29 +1,10 @@
 #include <ArduinoJson.h>
 #include <Servo.h>
 #include "AccelStepper.h"
-#include <NewPing.h>
-
 
 Servo myServo;  // Crea un objeto Servo
 
 StaticJsonDocument<200> doc;
-String buffer = "";  // Buffer para acumular los datos
-
-
-
-//SoftwareSerial BTSerial(19, 18);
-
-// int M1_Dir = 53;
-// int M1_Vel = 2;
-
-// int M2_Dir = 51;
-// int M2_Vel = 3;
-
-// int M3_Dir = 49;
-// int M3_Vel = 4;
-
-// int M4_Dir = 47;
-// int M4_Vel = 5;
 
 ///////// SERIAL /////////////
 
@@ -61,7 +42,7 @@ int potPin = A0; // Pin del potenciómetro
 int Distance;
 
 unsigned long previousMillis = 0; // Almacena el último tiempo de actualización
-const long interval = 500; // Intervalo de 0.5 segundos (500 milisegundos)
+const long interval = 750; // Intervalo de 0.5 segundos (500 milisegundos)
 
 int Pisos[] = {
   70, // Piso 1, altura aproximada 100
@@ -73,8 +54,8 @@ int Pisos[] = {
 
 // ========= STEP =============//
 
-#define DIR 26
-#define PUL 28
+#define DIR 24
+#define PUL 26
 #define motorInterfaceType 1
 
 #define IMAN 38
@@ -96,21 +77,16 @@ bool Iman;
 //========= ULTRASONIC ========//
 #define TRIG1 30
 #define ECHO1 32
+
 #define TRIG2 44
 #define ECHO2 46
-#define MAX_DISTANCE 200
-
-NewPing sonar1(TRIG1, ECHO1, MAX_DISTANCE);
-NewPing sonar2(TRIG2, ECHO2, MAX_DISTANCE);
-
 
 int Distance1;
 int Distance2;
 
 //// ============= OTROS ===========///
 
-#define LED_PIN 20 
-
+#define IND 20
 
 //====================== SETUP ======================//
 
@@ -133,11 +109,13 @@ void setup() {
 
   //====================
 
-    myServo.attach(SERVO_PIN);  // Conecta el servo al pin 9
-    setServoAngle(0);  // Establece el ángulo del servo a 0 grados
+   // Configurar el pin del endstop como entrada
+  pinMode(ENDSTOP, INPUT_PULLUP); // Utiliza un pull-up interno para evitar ruido
 
-  pinMode(IMAN, OUTPUT);  // Configura el pin del relé como salida
-  digitalWrite(IMAN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
+    myServo.attach(SERVO_PIN);  // Conecta el servo al pin 9
+    setServoAngle(90);  // Establece el ángulo del servo a 0 grados
+
+ 
 
    pinMode(ENA, OUTPUT);
     pinMode(L_PWM, OUTPUT);
@@ -150,17 +128,32 @@ void setup() {
   stepper.setMaxSpeed(3000);
   stepper.setAcceleration(1000);
 
-  pinMode(LED_PIN, OUTPUT);  // Configura el pin del relé como salida
-  digitalWrite(LED_PIN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
+  pinMode(IMAN, OUTPUT);  // Configura el pin del relé como salida
+  digitalWrite(IMAN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
+
+  pinMode(IND, OUTPUT);  // Configura el pin del relé como salida
+  digitalWrite(IND, LOW);  // Asegúrate de que el relé esté inicialmente apagado
+
+
+
+
+    pinMode(TRIG1, OUTPUT);
+  pinMode(ECHO1, INPUT);
+  
+  // Inicializar pines del segundo sensor ultrasónico
+  pinMode(TRIG2, OUTPUT);
+  pinMode(ECHO2, INPUT);
+
 
 } 
 
 //====================== BUCLE PRINCIPAL ======================//
 
 void loop() {
-    ////////////////////////////////SERIAL USB//////////////////////////////////////
 
-    strT = "";
+  //////////////////////////// SERIAL USB //////////////////////////////////////
+      
+  strT = "";
     if (Serial.available())
     {
       strT = Serial.readStringUntil('\n');
@@ -272,54 +265,39 @@ void loop() {
 
     }
 
+  ////////////////////////////////////////////////////////////
 
-    /////////////////////////////While Serial1////////////////////////////
+  ////////////////////// BLUETOOTH SERIAL ////////////////////
+    if (Serial1.available()) { // Si hay datos disponibles en el puerto serie del Arduino IDE
+      //mensaje = Serial.readString();  // Leer la velocidad de giro enviada desde Python
+    // Serial.println(mensaje);
 
+      deserializeJson(doc, Serial1);
 
-        // Leer datos del HC-05
-        while (Serial1.available()) {
-          char c = Serial1.read();
-          buffer += c;
+      String Modo = doc["Modo"];
+      
+      /*
+      int pos = mensaje.indexOf(',');
+      int pos1 = mensaje.indexOf(',', pos + 1); // Buscar la segunda coma
+      int pos2 = mensaje.indexOf(',', pos1 + 1); // Buscar la tercera coma
+      int pos3 = mensaje.indexOf(',', pos2 + 1); // Buscar la cuarta coma
+      int pos4 = mensaje.indexOf(',', pos3 + 1); // Buscar la quinta coma
 
-          // Verificar si hemos recibido un terminador de línea
-          if (c == '\n') {
-            // Parpadear el LED indicando la recepción de datos
-           
+      m1_vel = mensaje.substring(0, pos);
+      m2_vel = mensaje.substring(pos + 1, pos1); // Extraer la subcadena entre la primera y segunda coma
+      m3_vel = mensaje.substring(pos1 + 1, pos2); // Extraer la subcadena entre la segunda y tercera coma
+      m4_vel = mensaje.substring(pos2 + 1, pos3); // Extraer la subcadena entre la tercera y cuarta coma
+      Dato_movimiento = mensaje.substring(pos3 + 1, pos4); // Extraer la subcadena entre la cuarta y quinta coma
+      Dato_velocidad = mensaje.substring(pos4 + 1); // La subcadena restante es para la velocidad
 
-            // Intentar deserializar el JSON desde el buffer
-            DeserializationError error = deserializeJson(doc, buffer);
+      int vel_m1 = m1_vel.toInt();
+      int vel_m2 = m2_vel.toInt();
+      int vel_m3 = m3_vel.toInt();
+      int vel_m4 = m4_vel.toInt();
+      int Valor_velocidad = Dato_velocidad.toInt();
+      */
 
-            if (error) {
-              Serial.print(F("Error al deserializar JSON: "));
-              Serial.println(error.c_str());
-              buffer = "";  // Limpiar el buffer en caso de error
-              return;
-            }
-
-            // Extraer datos del JSON
-            String Modo = doc["Modo"];
-            String Dato_movimiento = doc["Dato_movimiento"];
-            int Dato_velocidad = doc["Dato_velocidad"];
-
-            // Validar que los datos sean correctos
-            if (!Modo || !Dato_movimiento || Dato_velocidad < 0) {
-              Serial.println("Datos no válidos recibidos.");
-              buffer = "";  // Limpiar el buffer en caso de datos no válidos
-              return;
-            }
-
-            // Imprimir los datos recibidos en el monitor serie
-            Serial.print("Modo: ");
-            Serial.println(Modo);
-            Serial.print("Movimiento: ");
-            Serial.println(Dato_movimiento);
-            Serial.print("Velocidad: ");
-            Serial.println(Dato_velocidad);
-
-
-            //////////////////////////////////////////////////////////
-
-            if (Modo == "Auto"){
+      if (Modo == "Auto"){
 
         int vel_m1 = doc["m1_vel"];
         int vel_m2 = doc["m2_vel"];
@@ -381,17 +359,12 @@ void loop() {
       }
 
       if (Modo == "Manual"){
-        
-        Serial.println("DENTRO MODO MANUAL");
 
         String Dato_movimiento = doc["Dato_movimiento"];
         int Valor_velocidad = doc["Dato_velocidad"];
 
         //nuevo giro horario
         if (Dato_movimiento == "Giro_Horario"){
-
-          Serial.println("GIRO HORARIO SET");
-
           digitalWrite(M1_Dir, LOW);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -407,8 +380,6 @@ void loop() {
 
         //nuevo giro antihorario
         if (Dato_movimiento == "Giro_Antihorario"){
-
-          Serial.println("GIRO ANTI-HORARIO SET");
           digitalWrite(M1_Dir, HIGH);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -424,7 +395,6 @@ void loop() {
 
         //Nuevoo movimiento hacia adelante
         if (Dato_movimiento == "Adelante"){
-          Serial.println("GIRO ADELANTE SET");
           digitalWrite(M1_Dir, LOW);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -440,7 +410,6 @@ void loop() {
 
         //Nuevo movimiento hacia atras
         if (Dato_movimiento == "Atras"){
-          Serial.println("GIRO ATRAS SET");
           digitalWrite(M1_Dir, HIGH);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -456,7 +425,6 @@ void loop() {
 
         //Nuevo movimiento hacia la derecha
         if (Dato_movimiento == "Derecha"){
-          Serial.println("GIRO DERECHA SET");
           digitalWrite(M1_Dir, LOW);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -473,7 +441,6 @@ void loop() {
 
         //Nuevo movimiento hacia la izquierda
         if (Dato_movimiento == "Izquierda"){
-          Serial.println("GIRO IZQUIERDA SET");
           digitalWrite(M1_Dir, HIGH);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -490,7 +457,6 @@ void loop() {
 
         //Nuevo movimiento diagonal inferior derecha
         if (Dato_movimiento == "Diagonal_Superior_IZQ"){
-          Serial.println("GIRO DIAG-SUP-IZQ SET");
           digitalWrite(M1_Dir, HIGH);
           analogWrite(M1_Vel, 0);
 
@@ -506,7 +472,6 @@ void loop() {
 
         //Nuevo movimiento diagonal superior derecha
         if (Dato_movimiento == "Diagonal_Superior_DER"){
-          Serial.println("GIRO DIAG-SUP-IZQ SET");
           digitalWrite(M1_Dir, LOW);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -522,7 +487,6 @@ void loop() {
 
         //Nuevo movimiento diagonal inferior derecha
         if (Dato_movimiento == "Diagonal_Inferior_IZQ"){
-          Serial.println("GIRO DIAG-INF-IZQ SET");
           digitalWrite(M1_Dir, HIGH);
           analogWrite(M1_Vel, Valor_velocidad);
 
@@ -538,7 +502,6 @@ void loop() {
 
         //Nuevo movimiento diagonal superior izquierda
         if (Dato_movimiento == "Diagonal_Inferior_DER"){
-          Serial.println("GIRO DIAG-INF-DER SET");
           digitalWrite(M1_Dir, LOW);
           analogWrite(M1_Vel, 0);
 
@@ -551,77 +514,9 @@ void loop() {
           digitalWrite(M4_Dir, HIGH);
           analogWrite(M4_Vel, 0);
         }
-
-        ////////////////////////////////////////////
-        
-        //Nuevo movimiento diagonal superior izquierda
-        if (Dato_movimiento == "Leer"){
-           ReadAllDistances();
-            Serial1.print("100, ");
-            Serial1.print(Distance1);
-            Serial1.print(", ");
-            Serial1.println(Distance2);
-        }
-
-        if (Dato_movimiento == "Servo"){
-           setServoAngle(Valor_velocidad);
-        }
-
-        if (Dato_movimiento == "SUBIR"){
-            Subir(velocidad);
-        }
-
-        if (Dato_movimiento == "BAJAR"){
-           Bajar(velocidad);
-        }
-
-        if (Dato_movimiento == "DETENER"){
-          Detener();
-        }
-
-        if (Dato_movimiento == "Ir_Piso"){
-          IrPiso(Valor_velocidad);
-        }
-
-        if (Dato_movimiento == "HOME"){
-           home();
-        }
-
-        if (Dato_movimiento == "INICIO"){
-          moveToPosition(Position);
-        }
-
-        if (Dato_movimiento == "FIN"){
-          moveToPosition(PositionMax);
-        }
-
-         if (Dato_movimiento == "ENCENDER_LED"){
-          LedStatus(true);
-          LedStatus(true);
-        }
-
-         if (Dato_movimiento == "APAGAR_LED"){
-          LedStatus(false);
-          LedStatus(false);
-        }
-
-         if (Dato_movimiento == "ENCENDER_IMAN"){
-          ImanStatus(true);
-          ImanStatus(true);
-        }
-
-         if (Dato_movimiento == "APAGAR_IMAN"){
-          ImanStatus(false);
-          ImanStatus(false);
-        }
-
       }
 
-
-
-
       if (Modo == "Quieto"){
-        Serial.println("QUIETO SET");
         digitalWrite(M1_Dir, LOW);
         analogWrite(M1_Vel, 0);
 
@@ -636,24 +531,9 @@ void loop() {
 
       }
 
+    }
 
-            
-            //////////////////////////////////////////////////////////
-
-            // Limpiar el buffer después de procesar el mensaje
-            buffer = "";
-          }
-        }
-
-
-
-
-    //////////////////////////////////////////////////////////
 }
-    
-
-  ////////////////////////////////////////////////////////////
-
 
 //====================== FUNCIONES ======================//
 
@@ -680,13 +560,13 @@ void ImanStatus(bool activate) {
 }
 
 // Función para controlar el electroimán
-void LedStatus(bool activate) {
-  if (activate) {
-    digitalWrite(LED_PIN, HIGH);  // Activa el relé (enciende el electroimán)
-    Serial.println("Electroimán activado");  // Imprime el estado en el monitor serial
+void LedStatus(bool activate1) {
+  if (activate1) {
+    digitalWrite(IND, HIGH);  // Activa el relé (enciende el electroimán)
+    Serial.println("Led activado");  // Imprime el estado en el monitor serial
   } else {
-    digitalWrite(LED_PIN, LOW);  // Desactiva el relé (apaga el electroimán)
-    Serial.println("Electroimán desactivado");  // Imprime el estado en el monitor serial
+    digitalWrite(IND, LOW);  // Desactiva el relé (apaga el electroimán)
+    Serial.println("Led desactivado");  // Imprime el estado en el monitor serial
   }
 }
 
@@ -825,27 +705,33 @@ void Detener() {
 
 // Function to move the carriage to home position
 void home() {
+  
   stepper.setMaxSpeed(2000);
   stepper.setAcceleration(1000);
-  bool first = true;
+  // bool first = true;
 
-  // Move towards home position until endstop is triggered
+  delay(10);
+  // Imprimir el valor del endstop al inicio
+  Serial.print("Valor inicial del endstop: ");
+  Serial.println(digitalRead(ENDSTOP));
+  
+  // Mover hacia la posición de inicio hasta que se active el endstop
   while (!digitalRead(ENDSTOP)) {
-
-    stepper.moveTo(-10000); // Move slowly towards home
+    stepper.moveTo(-10000); // Mover lentamente hacia el home
     stepper.runToPosition();
     Serial.println("Homing");
   }
 
-  // Set position and Position to zero, and stop the motor
+  // Configurar la posición actual a cero y detener el motor
   stepper.setCurrentPosition(0);
   Position = 0;
   stepper.stop();
   
-  // Reset speed and acceleration to original values
+  // Restablecer la velocidad y aceleración a los valores originales
   stepper.setMaxSpeed(3000);
   stepper.setAcceleration(1000);
 }
+
 
 // Function to move to a specific height and update Position variable
 void moveToPosition(int targetPosition) {
@@ -862,30 +748,4 @@ void printCurrentPosition() {
   long currentPosition = stepper.currentPosition();
   Serial.print("Current Position: ");
   Serial.println(currentPosition);
-}
-
-
-// Función para leer la distancia utilizando NewPing
-int ReadDistance(int trigPin, int echoPin, int maxDistance) {
-  NewPing sonar(trigPin, echoPin, maxDistance);
-  int distance = sonar.ping_cm();
-  return (distance == 0) ? maxDistance : distance;
-}
-
-// Función para leer y actualizar las distancias globales de los sensores
-void ReadAllDistances() {
-  Distance1 = ReadDistance(TRIG1, ECHO1, MAX_DISTANCE);
-  Distance2 = ReadDistance(TRIG2, ECHO2, MAX_DISTANCE);
-
-  // Imprime las distancias en la consola serie
-  Serial.print("Distance1: ");
-  Serial.print(Distance1);
-  Serial.println(" cm");
-
-  Serial.print("Distance2: ");
-  Serial.print(Distance2);
-  Serial.println(" cm");
-
-  // Espera 500 ms antes de la siguiente lectura
-  delay(500);
 }

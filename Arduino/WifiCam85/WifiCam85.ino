@@ -1,8 +1,11 @@
 #include "WifiCam.hpp"
 #include <WiFi.h>
 
-static const char* WIFI_SSID = "Mqtt";
-static const char* WIFI_PASS = "torresjairo";
+// static const char* WIFI_SSID = "Mqtt";
+// static const char* WIFI_PASS = "torresjairo";
+
+static const char* WIFI_SSID = "SilicaLab";
+static const char* WIFI_PASS = "Lab151098*";
 
 esp32cam::Resolution initialResolution;
 WebServer server(80);
@@ -25,8 +28,8 @@ void setup()
   Serial.println("WiFi connected");
 
   // Configurar dirección IP estática
-  IPAddress local_IP(192, 168, 0, 85); // Dirección IP estática que deseas asignar al ESP32-CAM
-  IPAddress gateway(192, 168, 0, 1);    // Dirección de la puerta de enlace
+  IPAddress local_IP(192, 168, 255, 85); // Dirección IP estática que deseas asignar al ESP32-CAM
+  IPAddress gateway(192, 168, 255, 1);    // Dirección de la puerta de enlace
   IPAddress subnet(255, 255, 255, 0);   // Máscara de subred
   WiFi.config(local_IP, gateway, subnet);
 
