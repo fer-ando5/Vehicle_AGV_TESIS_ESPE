@@ -59,22 +59,23 @@ String Dato_movimiento, Dato_velocidad;
 // #define A_ANAG_PIN A0
 int potPin = A0; // Pin del potenciómetro
 int Distance;
+int maxPosition = 16900;
 
 unsigned long previousMillis = 0; // Almacena el último tiempo de actualización
 const long interval = 500; // Intervalo de 0.5 segundos (500 milisegundos)
 
 int Pisos[] = {
-  70, // Piso 1, altura aproximada 100
+  80, // Piso 1, altura aproximada 100
   250, // Piso 1, altura aproximada 100
   550, // Piso 2, altura aproximada 200
-  1020, // Piso 3, altura aproximada 300
+  950, // Piso 3, altura aproximada 300
   // Agrega más pisos según sea necesario
 };
 
 // ========= STEP =============//
 
-#define DIR 26
-#define PUL 28
+#define DIR 24
+#define PUL 26
 #define motorInterfaceType 1
 
 #define IMAN 38
@@ -134,7 +135,7 @@ void setup() {
   //====================
 
     myServo.attach(SERVO_PIN);  // Conecta el servo al pin 9
-    setServoAngle(0);  // Establece el ángulo del servo a 0 grados
+    setServoAngle(90);  // Establece el ángulo del servo a 0 grados
 
   pinMode(IMAN, OUTPUT);  // Configura el pin del relé como salida
   digitalWrite(IMAN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
@@ -146,12 +147,17 @@ void setup() {
     // Activa la salida
     digitalWrite(ENA, HIGH);
 
-
   stepper.setMaxSpeed(3000);
   stepper.setAcceleration(1000);
 
   pinMode(LED_PIN, OUTPUT);  // Configura el pin del relé como salida
   digitalWrite(LED_PIN, LOW);  // Asegúrate de que el relé esté inicialmente apagado
+
+
+   ImanStatus(false);
+   LedStatus(false);
+
+    home();
 
 } 
 
@@ -217,17 +223,20 @@ void loop() {
       Serial.println("Home Init");
       delay(10);
       home();
+      
       datoT[0] = 0;
       break;
 
       case 6:
 
-      moveToPosition(datoT[1]);
+      moveToPosition(maxPosition);
       datoT[0] = 0;
       break;
 
       case 7:
+      moveToPosition(datoT[1]);
       printCurrentPosition();
+      printAltura();
       datoT[0] = 0;
       break;
           
@@ -264,6 +273,12 @@ void loop() {
       datoT[0] = 0;
       break;
 
+       case 13:
+      ReadAllDistances();
+      datoT[0] = 0;
+      break;
+
+      
       default:
       // Handle unexpected cases
       Serial.println("Unknown command");
@@ -588,7 +603,7 @@ void loop() {
         }
 
         if (Dato_movimiento == "INICIO"){
-          moveToPosition(Position);
+          moveToPosition(0);
         }
 
         if (Dato_movimiento == "FIN"){
@@ -671,10 +686,10 @@ void setServoAngle(int angle) {
 // Función para controlar el electroimán
 void ImanStatus(bool activate) {
   if (activate) {
-    digitalWrite(IMAN, HIGH);  // Activa el relé (enciende el electroimán)
+    digitalWrite(IMAN, LOW);  // Activa el relé (enciende el electroimán)
     Serial.println("Electroimán activado");  // Imprime el estado en el monitor serial
   } else {
-    digitalWrite(IMAN, LOW);  // Desactiva el relé (apaga el electroimán)
+    digitalWrite(IMAN, HIGH);  // Desactiva el relé (apaga el electroimán)
     Serial.println("Electroimán desactivado");  // Imprime el estado en el monitor serial
   }
 }
@@ -682,11 +697,11 @@ void ImanStatus(bool activate) {
 // Función para controlar el electroimán
 void LedStatus(bool activate) {
   if (activate) {
-    digitalWrite(LED_PIN, HIGH);  // Activa el relé (enciende el electroimán)
-    Serial.println("Electroimán activado");  // Imprime el estado en el monitor serial
+    digitalWrite(LED_PIN, LOW);  // Activa el relé (enciende el electroimán)
+    Serial.println("Led activado");  // Imprime el estado en el monitor serial
   } else {
-    digitalWrite(LED_PIN, LOW);  // Desactiva el relé (apaga el electroimán)
-    Serial.println("Electroimán desactivado");  // Imprime el estado en el monitor serial
+    digitalWrite(LED_PIN, HIGH);  // Desactiva el relé (apaga el electroimán)
+    Serial.println("Led desactivado");  // Imprime el estado en el monitor serial
   }
 }
 
@@ -707,8 +722,8 @@ void IrPiso(int numeroPisoDeseado) {
     int histeresisInferior = 10; // Ajusta según sea necesario
 
     // Define las velocidades máxima y mínima
-    int velocidadMaxima = 200;
-    int velocidadMinima = 100;
+    int velocidadMaxima = 250;
+    int velocidadMinima = 150;
 
     // Loop para ajustar la altura hasta llegar al piso deseado
     while (true) {
@@ -721,7 +736,7 @@ void IrPiso(int numeroPisoDeseado) {
         // Calcula la velocidad basada en la diferencia de altura
         int velocidad = map(abs(diferenciaAltura), 1023, 0, velocidadMaxima, velocidadMinima);
         velocidad = constrain(velocidad, velocidadMinima, velocidadMaxima); // Asegura que la velocidad esté dentro del rango
-
+        // int velocidad = 150;
         // Compara la altura actual con la altura deseada
         if (alturaActual < alturaDeseada - histeresisInferior) {
             // Si la altura actual es menor que la deseada, sube
@@ -825,26 +840,38 @@ void Detener() {
 
 // Function to move the carriage to home position
 void home() {
+  // Configurar velocidad y aceleración para el proceso de homing
   stepper.setMaxSpeed(2000);
   stepper.setAcceleration(1000);
-  bool first = true;
+  
+  // Mover el motor continuamente hacia el home
+  stepper.move(20000); // Configurar el movimiento inicial
 
-  // Move towards home position until endstop is triggered
-  while (!digitalRead(ENDSTOP)) {
+  // Bucle para mover el motor hacia la posición de home
+  while (digitalRead(ENDSTOP) == HIGH) {
+    stepper.run(); // Mantener el motor en movimiento
 
-    stepper.moveTo(-10000); // Move slowly towards home
-    stepper.runToPosition();
-    Serial.println("Homing");
+    // Imprimir mensaje de homing en el monitor seria
+    // Verificar si el endstop se ha activado
+    if (digitalRead(ENDSTOP) == LOW) {
+      // Detener el motor inmediatamente
+      stepper.stop();
+      Serial.println("ENDSTOP activado, motor detenido.");
+      break; // Salir del bucle while
+    }
   }
 
-  // Set position and Position to zero, and stop the motor
-  stepper.setCurrentPosition(0);
-  Position = 0;
-  stepper.stop();
+  // Establecer la posición actual a cero y detener el motor
+  // stepper.setCurrentPosition(0); 
+  // maxPosition = stepper.currentPosition();
+  stepper.setCurrentPosition(maxPosition);
   
-  // Reset speed and acceleration to original values
+  // Configurar la velocidad y aceleración a los valores originales
   stepper.setMaxSpeed(3000);
   stepper.setAcceleration(1000);
+  Serial.println("Home Done");
+  moveToPosition(0);
+  
 }
 
 // Function to move to a specific height and update Position variable
