@@ -2,11 +2,11 @@
 #include <PubSubClient.h>
 
 // Configuración de la red WiFi
-const char* ssid = "SilicaLab";
-const char* password = "Lab151098*";
+const char* ssid = "CarBox";
+const char* password = "Espe2024*";
 
 // Configuración del broker MQTT
-const char* mqtt_server = "192.168.65.34"; // Dirección IP del broker MQTT
+const char* mqtt_server = "192.168.192.34"; // Dirección IP del broker MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);

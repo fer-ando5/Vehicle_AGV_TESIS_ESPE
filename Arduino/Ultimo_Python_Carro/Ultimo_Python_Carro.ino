@@ -6,7 +6,10 @@
 
 Servo myServo;  // Crea un objeto Servo
 
-StaticJsonDocument<200> doc;
+// StaticJsonDocument<200> doc;
+const size_t bufferSize = 4096; // 4 KB, ajusta según sea necesario
+DynamicJsonDocument doc(bufferSize);
+
 String buffer = "";  // Buffer para acumular los datos
 
 
@@ -29,24 +32,24 @@ String buffer = "";  // Buffer para acumular los datos
 
 String strT = "";
 const char separatorT = ',';
-const int dataLengthT = 4;
+const int dataLengthT = 5;
 int datoT[dataLengthT];
 
 
 //////////////////////////////
 
 // ========= MOTORES MOVIMIENTO =============//
-#define M1_Dir 2
-#define M1_Vel 3
+#define M3_Dir 2
+#define M3_Vel 3
 
-#define M2_Dir 4
-#define M2_Vel 5
+#define M4_Dir 4
+#define M4_Vel 5
 
-#define M3_Dir 6
-#define M3_Vel 7
+#define M1_Dir 8
+#define M1_Vel 9
 
-#define M4_Dir 8
-#define M4_Vel 9
+#define M2_Dir 6
+#define M2_Vel 7
 
 String mensaje, m1_vel, m2_vel, m3_vel, m4_vel;
 String Dato_movimiento, Dato_velocidad;
@@ -278,7 +281,37 @@ void loop() {
       datoT[0] = 0;
       break;
 
+      case 14:
+      CogerCarga();
+      datoT[0] = 0;
+      break;
+
+      case 15:
+      DejarCarga();
+      datoT[0] = 0;
+      break;
+
+      case 17:
+      AvanzarHasta(100, datoT[1]); // Mueve los motores hasta que la distancia sea <= 20 cm
+      datoT[0] = 0;
+      break;
       
+
+      case 18:
+      girar("Horario", 100 , datoT[1]*1000);
+      datoT[0] = 0;
+      break;
+
+      case 19:
+      girar("Antihorario", 100 , datoT[1]*1000);
+      datoT[0] = 0;
+      break;
+
+      case 20:
+      controlarTodosLosMotores(datoT[1], datoT[2], datoT[3], datoT[4]);
+      datoT[0] = 0;
+      break;
+
       default:
       // Handle unexpected cases
       Serial.println("Unknown command");
@@ -336,63 +369,43 @@ void loop() {
 
             if (Modo == "Auto"){
 
-        int vel_m1 = doc["m1_vel"];
-        int vel_m2 = doc["m2_vel"];
-        int vel_m3 = doc["m3_vel"];
-        int vel_m4 = doc["m4_vel"];
+                int vel_m1 = doc["m1_vel"];
+                int vel_m2 = doc["m2_vel"];
+                int vel_m3 = doc["m3_vel"];
+                int vel_m4 = doc["m4_vel"];
+                controlarTodosLosMotores(vel_m1,  vel_m2,  vel_m3,  vel_m4);
 
-      // Controlar la velocidad del motor utilizando la señal PWM
-        if (vel_m1 > 0) {
-          Serial.println("Positivo M1");
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, vel_m1);
-        }
-        
-        if (vel_m1 <= 0) {
-          int Nvel_m1 = abs(vel_m1);
-          Serial.println("Negativo M1");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, Nvel_m1);
-        }
+                String Dato_movimiento = doc["Dato_movimiento"];
+                int Valor_velocidad = doc["Dato_velocidad"];
+                int Valor_tiempo = doc["Dato_tiempo"];
 
-        if (vel_m2 > 0) {
-          Serial.println("Positivo M2");
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, vel_m2);
-        }
-        
-        if (vel_m2 <= 0) {
-          int Nvel_m2 = abs(vel_m2);
-          Serial.println("Negativo M2");
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, Nvel_m2);
-        }
 
-        if (vel_m3 > 0) {
-          Serial.println("Positivo M3");
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, vel_m3);
-        }
-        
-        if (vel_m3 <= 0) {
-          int Nvel_m3 = abs(vel_m3);
-          Serial.println("Negativo M3");
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, Nvel_m3);
-        }
+                if (Dato_movimiento == "Avanzar"){
+                  Serial.println("Avanzar Hasta");
+                  AvanzarHasta(100, Valor_velocidad);
+                }
 
-        if (vel_m4 > 0) {
-          Serial.println("Positivo M4");
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, vel_m4);
-        }
+                if (Dato_movimiento == "Giro_Horario"){
+                  Serial.println("Avanzar Hasta");
+                  girar("Horario", 100 , Valor_velocidad*1000);
+                }
+
+                if (Dato_movimiento == "Giro_Antihorario"){
+                  Serial.println("Avanzar Hasta");
+                  girar("Antihorario", 100 , Valor_velocidad*1000);
+                }
+
+                if (Dato_movimiento == "MoverPor"){
+                  Serial.println("Mover Por");
+                  MoverPor(Valor_velocidad, Valor_tiempo);
+                }
+
+
+              // Controlar la velocidad del motor utilizando la señal PWM
+                
+
+
         
-        if (vel_m4 <= 0) {
-          int Nvel_m4 = abs(vel_m4);
-          Serial.println("Negativo M4");
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, Nvel_m4);
-        }
       }
 
       if (Modo == "Manual"){
@@ -402,169 +415,74 @@ void loop() {
         String Dato_movimiento = doc["Dato_movimiento"];
         int Valor_velocidad = doc["Dato_velocidad"];
 
+
+        if (Dato_movimiento == "Giro_Time"){
+
+          Serial.println("GIRO Tiempo");
+          girar(Dato_movimiento, 100 , Valor_velocidad);
+        }
+
         //nuevo giro horario
         if (Dato_movimiento == "Giro_Horario"){
 
           Serial.println("GIRO HORARIO SET");
-
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(Valor_velocidad,  -Valor_velocidad,  Valor_velocidad,  -Valor_velocidad);
         }
 
         //nuevo giro antihorario
         if (Dato_movimiento == "Giro_Antihorario"){
 
           Serial.println("GIRO ANTI-HORARIO SET");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(-Valor_velocidad,  Valor_velocidad,  -Valor_velocidad,  Valor_velocidad);
         }
 
         //Nuevoo movimiento hacia adelante
         if (Dato_movimiento == "Adelante"){
           Serial.println("GIRO ADELANTE SET");
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(Valor_velocidad,  Valor_velocidad,  Valor_velocidad,  Valor_velocidad);
         }
 
         //Nuevo movimiento hacia atras
         if (Dato_movimiento == "Atras"){
           Serial.println("GIRO ATRAS SET");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(-Valor_velocidad,  -Valor_velocidad,  -Valor_velocidad,  -Valor_velocidad);
         }
 
         //Nuevo movimiento hacia la derecha
         if (Dato_movimiento == "Derecha"){
           Serial.println("GIRO DERECHA SET");
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(-Valor_velocidad,  Valor_velocidad,  Valor_velocidad,  -Valor_velocidad);
 
         }
 
         //Nuevo movimiento hacia la izquierda
         if (Dato_movimiento == "Izquierda"){
           Serial.println("GIRO IZQUIERDA SET");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(-Valor_velocidad,  Valor_velocidad,  -Valor_velocidad,  Valor_velocidad);
 
         }
 
         //Nuevo movimiento diagonal inferior derecha
         if (Dato_movimiento == "Diagonal_Superior_IZQ"){
           Serial.println("GIRO DIAG-SUP-IZQ SET");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, 0);
-
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, 0);
+          controlarTodosLosMotores(Valor_velocidad,  0,  0,  Valor_velocidad);
         }
 
         //Nuevo movimiento diagonal superior derecha
         if (Dato_movimiento == "Diagonal_Superior_DER"){
           Serial.println("GIRO DIAG-SUP-IZQ SET");
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, 0);
-          
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, 0);
-          
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(0,  Valor_velocidad,  Valor_velocidad,  0);
         }
 
         //Nuevo movimiento diagonal inferior derecha
         if (Dato_movimiento == "Diagonal_Inferior_IZQ"){
           Serial.println("GIRO DIAG-INF-IZQ SET");
-          digitalWrite(M1_Dir, HIGH);
-          analogWrite(M1_Vel, Valor_velocidad);
-
-          digitalWrite(M2_Dir, HIGH);
-          analogWrite(M2_Vel, 0);
-          
-          digitalWrite(M3_Dir, LOW);
-          analogWrite(M3_Vel, 0);
-          
-          digitalWrite(M4_Dir, LOW);
-          analogWrite(M4_Vel, Valor_velocidad);
+          controlarTodosLosMotores(0,  -Valor_velocidad,  -Valor_velocidad,  0);
         }
 
         //Nuevo movimiento diagonal superior izquierda
         if (Dato_movimiento == "Diagonal_Inferior_DER"){
-          Serial.println("GIRO DIAG-INF-DER SET");
-          digitalWrite(M1_Dir, LOW);
-          analogWrite(M1_Vel, 0);
-
-          digitalWrite(M2_Dir, LOW);
-          analogWrite(M2_Vel, Valor_velocidad);
-          
-          digitalWrite(M3_Dir, HIGH);
-          analogWrite(M3_Vel, Valor_velocidad);
-          
-          digitalWrite(M4_Dir, HIGH);
-          analogWrite(M4_Vel, 0);
+          controlarTodosLosMotores(-Valor_velocidad,  0,  0,  -Valor_velocidad);
         }
 
         ////////////////////////////////////////////
@@ -628,6 +546,14 @@ void loop() {
          if (Dato_movimiento == "APAGAR_IMAN"){
           ImanStatus(false);
           ImanStatus(false);
+        }
+
+        if (Dato_movimiento == "Coger_Carga"){
+          CogerCarga();
+        }
+
+        if (Dato_movimiento == "Dejar_Carga"){
+          DejarCarga();
         }
 
       }
@@ -915,4 +841,119 @@ void ReadAllDistances() {
 
   // Espera 500 ms antes de la siguiente lectura
   delay(500);
+}
+
+
+void controlarMotor(int vel, int dirPin, int velPin, const char* motorLabel) {
+  if (vel > 0) {
+    Serial.print("Positivo ");
+    Serial.println(motorLabel);
+    digitalWrite(dirPin, LOW);
+    analogWrite(velPin, vel);
+  } else {
+    int Nvel = abs(vel);
+    Serial.print("Negativo ");
+    Serial.println(motorLabel);
+    digitalWrite(dirPin, HIGH);
+    analogWrite(velPin, Nvel);
+  }
+}
+
+void controlarTodosLosMotores(int vel1, int vel2, int vel3, int vel4) {
+  controlarMotor(vel1, M1_Dir, M1_Vel, "M1");
+  controlarMotor(-vel2, M2_Dir, M2_Vel, "M2");
+  controlarMotor(vel3, M3_Dir, M3_Vel, "M3");
+  controlarMotor(-vel4, M4_Dir, M4_Vel, "M4");
+}
+
+void girar(String direccion, int velocidad, unsigned long tiempo) {
+    // Activar motores según la dirección
+    if (direccion == "Horario") {
+        Serial.println("GIRO HORARIO SET");
+        controlarTodosLosMotores(velocidad, -velocidad, velocidad, -velocidad);
+    } else if (direccion == "Antihorario") {
+        Serial.println("GIRO ANTI-HORARIO SET");
+        controlarTodosLosMotores(-velocidad, velocidad, -velocidad, velocidad);
+    } else {
+        Serial.println("DIRECCIÓN NO RECONOCIDA");
+        return; // Salir si la dirección no es válida
+    }
+
+    // Esperar el tiempo especificado
+    delay(tiempo);
+
+    // Detener los motores
+    Serial.println("DETENCIÓN DE MOTORES");
+    controlarTodosLosMotores(0, 0, 0, 0);
+}
+
+// Función para avanzar hasta que la distancia sea menor o igual al límite
+void AvanzarHasta(int velocidad, int limite) {
+  // Activa los motores a la velocidad deseada
+  controlarTodosLosMotores(velocidad, velocidad, velocidad , velocidad);
+  
+  long distancia;
+  
+  do {
+    distancia = ReadDistance(TRIG2, ECHO2, MAX_DISTANCE); // Lee la distancia del sensor
+    Serial.print("Distancia actual: ");
+    Serial.print(distancia);
+    Serial.println(" cm");
+    
+    delay(100); // Espera 100 ms antes de leer nuevamente
+  } while (distancia > limite);
+  
+  // Detén los motores cuando se alcance el límite
+  controlarTodosLosMotores(0,0,0,0);
+}
+
+void MoverPor(int velocidad, unsigned long tiempo) {
+  // Activa todos los motores a la velocidad deseada
+  controlarTodosLosMotores(velocidad, velocidad, velocidad, velocidad);
+  
+  unsigned long tiempoInicio = millis(); // Guarda el tiempo actual
+  
+  // Mantiene el movimiento durante el tiempo especificado
+  while (millis() - tiempoInicio < tiempo) {
+    // Puedes incluir aquí código adicional si es necesario
+    delay(10); // Espera para evitar sobrecargar la CPU
+  }
+  
+  // Detén los motores cuando se haya transcurrido el tiempo especificado
+  controlarTodosLosMotores(0, 0, 0, 0);
+}
+
+
+void CogerCarga() {
+    // Mover el accionamiento lineal hasta la posición máxima
+    moveToPosition(PositionMax);
+    delay(100); // Esperar 100 ms
+
+    // Activar el electroimán
+    LedStatus(true);
+    delay(100); // Esperar 100 ms
+
+    // Mover el accionamiento lineal de vuelta a la posición 0
+    moveToPosition(0);
+    delay(100); // Esperar 100 ms
+
+    // Desactivar el electroimán
+    LedStatus(false);
+    delay(100); // Esperar 100 ms
+}
+
+void DejarCarga() {
+    // Activar el electroimán
+    LedStatus(true);
+    delay(100); // Esperar 100 ms
+    // Mover el accionamiento lineal hasta la posición máxima
+    moveToPosition(PositionMax);
+    delay(100); // Esperar 100 ms
+    // Mover el accionamiento lineal de vuelta a la posición 0
+    LedStatus(false);
+    delay(100); // Esperar 100 ms
+    moveToPosition(0);
+    delay(100); // Esperar 100 ms
+    // Desactivar el electroimán
+    
 }

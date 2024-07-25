@@ -88,7 +88,7 @@ load_and_print_pickle(ruta3)
 
 ############## UNDISTORTION #####################################################
 
-img = cv.imread('Calibracion\\cal5.png')
+img = cv.imread('Calibracion/image43.png')
 h,  w = img.shape[:2]
 newCameraMatrix, roi = cv.getOptimalNewCameraMatrix(cameraMatrix, dist, (w,h), 1, (w,h))
 

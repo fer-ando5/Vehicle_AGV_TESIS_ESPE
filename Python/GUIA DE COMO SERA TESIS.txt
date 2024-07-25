@@ -134,6 +134,7 @@ Llegada_Aruco = Movilizacion_PID(ObjetivoAruco)
 #24.-Envio de bandera de Robot en HOME
 enviaratributos_Robot_Home(HOME)
 
+
 ######################################### MODO Manual #########################################################
 
 

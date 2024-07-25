@@ -1,122 +1,111 @@
-import logging
-import time
-from tb_device_mqtt import TBDeviceMqttClient, TBPublishInfo
+import os
 import paho.mqtt.client as mqtt
-
-
-#Parte de codigo arucos 
-import cv2 as cv
-import cv2.aruco as aruco
-import numpy as np
-import serial
-import math
-from PIL import Image, ImageTk
-import requests
-
-#logeos para thingsboard
-logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__name__)
-
-
-##borar libreria randon luego 
-import random
-##########################################  Variables #########################################
-
-##########################################  Camara IP #########################################
-
-CamaraIP = "http://192.168.0.85/640x480.jpg"
-
-##########################################  Funciones  ########################################
-
+import time
 
 class Funciones_Complementarias:
-    
-    def __init__(self):
-        self.mqtt_broker = "10.52.172.0"  # Cambiar a la dirección IP de la laptop Lenovo
-        self.mqtt_port = 1883 #puerto de envio de datos para Mqtt
-        self.mqtt_topic = "v1/devices/me/telemetry"  
-        ############### TOKEN DE MESA 1 (84)###############
-        self.token_mesa1= "HAQDuCCiSr1dpXiTmtzX"
+    def __init__(self, mqtt_server, mqtt_port):
+        self.mqtt_server = mqtt_server
+        self.mqtt_port = mqtt_port
+        self.client = mqtt.Client()
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.last_message = {}
 
-        ############### TOKEN ROBOT (83)###############
-        self.token_robot= "NNz7OFhy2WnVm6eDB56x"
-
-        ############### TOKEN ROBOT (82)###############
-        self.token_plataforma= "NNz7OFhy2WnVm6eDB56x"
-        self.valoranteriorcajamesa1 = 3
-        self.cajavalormesa1 = 4
-        self.errorescajamesa1=1
-        self.token_referencia = None
-        self.client = None
-        self.contador = 1
-        
-#Funcion para pedir obtenner el atributo de caja
-    def on_attributes_change(self, result, exception=None):
-        if exception is not None:
-            print("Error al recibir atributos de ThingsBoard:", exception)
-            self.errorescajamesa1 = 1
-        
+    def on_connect(self, client, userdata, flags, rc):
+        print(f"Conectado al servidor MQTT con código de resultado: {rc}")
+        if rc == 0:
+            # Suscribir al tópico necesario
+            self.client.subscribe("/Caja/presencia1")
+            self.client.subscribe("/sensores/presencia1")
+            self.client.subscribe("/sensores/presencia2")
+            self.client.subscribe("/sensores/presencia3")
         else:
-            logging.info(result)
-            self.cajavalormesa1 = result.get('client', {}).get('Caja', None) #pedimos del cliente el atributo de caja 
-            if self.cajavalormesa1 is not None:
-                print("Valor de cajavalor:", self.cajavalormesa1)
-                self.errorescajamesa1 = 0
-                self.contador = 1
+            print(f"Error al conectar: {rc}")
 
-#Funcion para pedir los atributos de thingsboard
-    def Pedir_atributos_caja(self, token_referencia):
-        client = TBDeviceMqttClient("10.52.172.0", username=token_referencia) #Entrmaos usando el link del servidor y el token de referencia del dispositivo que estamos usando para sensar el dato de si existe una caja
-        client.connect() #conectamos al cliente
-        client.request_attributes(["Caja", "ledState"], callback=self.on_attributes_change) #Verificamos el atributos CAJA y el otro le puse y nunca lo borre y llama a la funcion on attributes change
-        time.sleep(2)
-        self.enviarcaja = self.cajavalormesa1
-        if self.errorescajamesa1 == 0: #si el error es igual a 0 se desconcta mientras tanto sigue realizando las peticiones de los atributos
-            client.disconnect() #desconectamos el cliente y lo dentenmos
-            client.stop()
+    def on_message(self, client, userdata, msg):
+        print(f'Recibido mensaje en tópico: {msg.topic} | Estado: {msg.payload.decode()}')
+        self.last_message[msg.topic] = msg.payload.decode()
 
+    def get_status(self, topic):
+        return self.last_message.get(topic, "Sin datos")
 
-#Funcion para verificar si existe una caja en la mesa para que el robot empiece su movimiento
-    def Validaion_Caja_Mesa(self):
-        print("??????????????? INICIA Proceso ???????????????")
-        while self.errorescajamesa1 == 1: #Si existe un error sigue intentando conectarse con el broker para verificar que existe la caja, si existe el error se agrega 1 segundo mas de espera para la siguiente peticion
-            time.sleep(self.contador)
-            self.contador = 1 + self.contador
-            print("Tiempo de pausa actual: ",self.contador)
-            self.Pedir_atributos_caja(self.token_mesa1) #Se ejecuta la funcion para pedir el atributo de caja para verifica si existe una caja o no
-        print("Proceso completado.")
-        self.errorescajamesa1 = self.seterror1() #Seteamos el error nuevamente en 1 para que entre en el while anterior
-        self.enviarcaja = self.cajavalormesa1
-        print("??????????????? FIN Proceso ???????????????")
-        return self.enviarcaja
+    def start(self):
+        self.client.connect(self.mqtt_server, self.mqtt_port, 60)
+        self.client.loop_start()
 
-#Funcion de seteo del error
-    def seterror1(self):
-        print("Seteamos el error con exito")
-        self.errorescajamesa1=1
-
+    def stop(self):
+        self.client.loop_stop()
+        self.client.disconnect()
     
-    def Enviar_atributos(self, token_referencia, Nombre_del_atributo, dato_atributo):
+    def publish_message(self, topic, message):
+        self.client.connect(self.mqtt_server, self.mqtt_port, 60)
+        self.client.publish(topic, message)
+        self.client.disconnect()
+
+    def Validacion_Caja_Mesa(self):
+        self.start()
+        # Esperar a que se reciba el mensaje
+        try:
+            while "/Caja/presencia1" not in self.last_message:
+                pass  # Esperar hasta que se reciba el mensaje
+        except KeyboardInterrupt:
+            print("\nSaliendo...")
+        finally:
+            estado_caja1 = self.get_status("/Caja/presencia1")
+            self.stop()
+            return estado_caja1
+
+    def Validacion_Repisas(self):
+        self.start()
+        estados = []
+        try:
+            # Esperar hasta que se reciban los mensajes de todos los sensores
+            sensores = ["/sensores/presencia1", "/sensores/presencia2", "/sensores/presencia3"]
+            while not all(sensor in self.last_message for sensor in sensores):
+                print(f"Esperando mensajes: {self.last_message}")  # Depuración
+                time.sleep(0.1)  # Esperar un corto período para evitar uso excesivo de CPU
+
+            # Obtener el estado de cada sensor
+            for sensor in sensores:
+                estado = self.get_status(sensor)
+                print(f"Mensaje recibido en tópico {sensor}: {estado}")  # Depuración
+                # Convertir el estado a entero si es necesario
+                try:
+                    estado = int(estado)
+                except ValueError:
+                    print(f"Error al convertir el estado del sensor {sensor} a entero")
+                    estado = -1  # Valor de error
+                estados.append(estado)
+                disponibilidad = 'Disponible' if estado == 0 else 'No disponible'
+                print(f"Estado del sensor {sensor}: {disponibilidad}")
+        except KeyboardInterrupt:
+            print("\nSaliendo...")
+        finally:
+            self.stop()
+            return estados
+
+
+    def Validar_Casilleros_Disponibles(self):
+        estados = self.Validacion_Repisas()
+
+        # Convertir los estados a enteros, si aún no lo son
+        estados = [int(estado) for estado in estados]
         
-        try: 
-            client = mqtt.Client()
+        # Imprimir los estados de los sensores
+        print(f"Estados de los sensores: {estados}")
 
-            if token_referencia == "Mesa":
-                token_referencia = self.token_mesa1
-                
-            elif token_referencia == "Robot":
-                token_referencia = self.token_robot
+        # Verifica si hay algún casillero disponible
+        casilleros_disponibles = [i + 1 for i, estado in enumerate(estados) if estado == 0]  # Estado 0 indica disponible
 
-            elif token_referencia == "Plataforma":
-                token_referencia = self.token_plataforma
+        print(f"Casilleros disponibles: {casilleros_disponibles}")
 
-            client.username_pw_set(token_referencia)
-            client.connect(self.mqtt_broker, self.mqtt_port, 55)
-            payload = '{"' + Nombre_del_atributo + '": "' + str(dato_atributo) + '"}'
-            client.publish(self.mqtt_topic, payload, qos=1)
-            time.sleep(1)  # Agrega un retraso de 1 segundo antes de desconectar el cliente
-            client.disconnect()
-            print("Datos enviados a ThingsBoard correctamente.")
-        except Exception as e:
-            print("Error al enviar datos a ThingsBoard:", e)
+        if not casilleros_disponibles:
+            print("ERROR SIN DISPOSICION DE CASILLEROS")
+            return 0  # Retorna 0 si no hay casilleros disponibles
+
+        # Retorna el casillero más cercano disponible
+        casillero_mas_cercano = min(casilleros_disponibles)
+        return casillero_mas_cercano
+
+
+

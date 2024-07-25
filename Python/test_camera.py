@@ -23,5 +23,5 @@ def stream_video(url):
     stream.close()
     cv2.destroyAllWindows()
 
-url = "http://192.168.255.85/640x480.mjpeg"
+url = "http://192.168.11.85/640x480.mjpeg"
 stream_video(url)

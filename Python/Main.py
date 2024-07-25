@@ -18,7 +18,7 @@ import threading
 import time
 import os
 import numpy as np  # Asegúrate de importar numpy
-
+from QR_Lector import QRLector
 
 import Tesis_Funciones_Version
 import IdentificadorIdAruco
@@ -26,6 +26,8 @@ import IdentificadorIdAruco
 
 import cv2
 import Aruco_Medicion_Distancia
+from Aruco_Medicion_Distancia import PIDController
+
 
 import serial
 import json
@@ -37,6 +39,9 @@ errorescajamesa1=1
 
 ########################################################## MODO AUTOMATICO ################################################################################
 
+mqtt_server = "192.168.192.34"
+mqtt_port = 1883
+
 
 class VentanaAutomatico:
     def __init__(self, master):
@@ -46,12 +51,13 @@ class VentanaAutomatico:
         # Obtener el ancho y alto de la pantalla
         ancho_pantalla = master.winfo_screenwidth()
         alto_pantalla = master.winfo_screenheight()
+        
         # Crear la instancia de Tk
         
         # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         
-        self.velocidad = 30
+        self.velocidad = 100
 
         # Crear la instancia de la clase VentanaAutomatico y pasarle la instancia de Tk
         # Iniciar el bucle de eventos de Tkinter
@@ -83,48 +89,123 @@ class VentanaAutomatico:
         # Crear un Label para mostrar el estado
         self.label_estado = tk.Label(master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.label_estado.pack(side=tk.BOTTOM, fill=tk.X)
-
+    
 ##################################### FINAL DE INTERFAZ GRAFICA ###################################################
 
     #Funcion al procesar el boton de inicio
     def Validaciones_Inicio(self):
-        funciones_complementarias = Tesis_Funciones_Version.Funciones_Complementarias() #Inicializamos el fichero de tesis funciones version complementarias
+        # AccionesRobot = PIDController(0.01, 0.01, 0.1 , 200, 0)
+
+        funciones_complementarias = Tesis_Funciones_Version.Funciones_Complementarias(mqtt_server, mqtt_port) #Inicializamos el fichero de tesis funciones version complementarias
         print("Inicia el proceso de validaciones_Inicio")
-        self.Existe_caja = funciones_complementarias.Validaion_Caja_Mesa() #Funcion para la validacion de la caja
+        
+        
+        self.Existe_caja = int(funciones_complementarias.Validacion_Caja_Mesa()) #Funcion para la validacion de la caja
+        # print("SELF.EXISTECAJA RESULTADO:")
+        print("Existe Caja?")
         print(self.Existe_caja)
+        # print(f"Valor recibido: {self.Existe_caja}")
+        # print(f"Tipo de valor recibido: {type(self.Existe_caja)}")
+        # time.sleep(2)
+        print("Existe Casillero?")
+        self.Existe_Casillero =  int(funciones_complementarias.Validar_Casilleros_Disponibles())
+        print(self.Existe_Casillero)
+        
+        
         time.sleep(2)
-        if self.Existe_caja == 0:
+        lector = QRLector()
+        print("Esperando detección de código QR...")
+        
+
+        if self.Existe_caja == 1:
             message = " " * 10 + "PRECAUCIÓN\n\nROBOT EN MOVIMIENTO"
             # Mostrar el cuadro de advertencia de inicio de movimiento del robot
             messagebox.showwarning("Advertencia", message, icon="warning", parent=self.master)
             print("Detectamos caja y pasamos a enviar atributos")
-            funciones_complementarias.Enviar_atributos("Robot","Inicio",True) #Enviamos los atributos a thingsboard sobre que el tema Inicio con el atributo TRUE para llevar el monitoreo en thingsboard
-            self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot")  # Actualiza el texto del Label
+            # funciones_complementarias.Enviar_atributos("Robot","Inicio",True) #Enviamos los atributos a thingsboard sobre que el tema Inicio con el atributo TRUE para llevar el monitoreo en thingsboard
+            funciones_complementarias.publish_message("robot/estado", "TRUE")
+            self.label_estado.config(text="Iniciando proceso, tenga cuidado con el robot de MesaCaja")  # Actualiza el texto del Label
             Objetivo_Aruco = 1 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
             Verificador_Aruco = False #Inicializamos verificacion aruco en false
             while Verificador_Aruco == False:
-                print("Entro en el while para buscar el aruco")
+                print("Entro en el while para buscar el aruco de MesaCaja")
                 Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
-            print("Salio del while para buscar el aruco")
-            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion
+            
+            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion  
+            # MOVIMIENTO DE ACCIONAMIENTO DE CAJA
+            self.CogerCarga()
+            time.sleep(10)
+            #LLama a la Funcion de Detección de QR
 
+            datos_mensaje = lector.procesar_codigo_qr()
+            print(datos_mensaje)
+            #VALIDACION DE REPISAS
+            self.Existe_Casillero =  int(funciones_complementarias.Validar_Casilleros_Disponibles())
+            
+            #GIRO PROGRAMADO PARA ORIENTACION
+            self.MoverPor(-100,5)
+            self.GirarPor("Giro_Horario",10)
+            
+            Objetivo_Aruco = 0 #asignamos el aruco objetivo ya que el aruco ID 1 corresponde al la mesa donde estara la caja
+            while Verificador_Aruco == False:
+                print("Entro en el while para buscar el aruco de Repisas")
+                Verificador_Aruco , Objetivo_Aruco = self.Aruco(Objetivo_Aruco) #Llamamos a la funcion para la busqueda del aruco
+            print("Salio del while para buscar el aruco de Repisas")
+              
+            self.Bandera_Fin_PID = Aruco_Medicion_Distancia.Estimation(Objetivo_Aruco) #Llamamos a la funcion de estimacion para empezar con la navegacion  
+            
 
-            funciones_complementarias.Enviar_atributos("Robot","Inicio",False) #Al final del proceso enviamos False para el monitoreo y decir que se finalizo el proceso de clasificacion de la caja
-        elif self.Existe_caja == 1: #Si no existe la caja se ejecuta esta funcion y se muestra un mensaje de alerta
+            #IR A LA REPISA
+            if self.Existe_Casillero != 0:
+                print(f"Mover hasta repisa {self.Existe_Casillero}")
+                
+                # Llamar a la función adecuada basada en el número de repisa
+                if self.Existe_Casillero == 1:
+                    print("Moviendo al piso A")
+                    self.ir_piso(1)
+                elif self.Existe_Casillero == 2:
+                    print("Moviendo al piso B")
+                    self.ir_piso(2)
+                elif self.Existe_Casillero == 3:
+                    print("Moviendo al piso C")
+                    self.ir_piso(3)
+                else:
+                    print("Número de repisa no válido.")
+            else:
+                print("No hay repisa disponible.")
+
+            print(f"Esperar 10 segundos hasta llegar al Piso")
+            time.sleep(10)
+            self.DejarCarga()
+
+            self.MoverPor(-100,5)
+            self.GirarPor("Giro_Horario",20)
+
+            self.MoverPor(100,5)
+            self.GirarPor("Giro_Horario",10)
+
+            
+            funciones_complementarias.publish_message("robot/estado", "FALSE") #Al final del proceso enviamos False para el monitoreo y decir que se finalizo el proceso de clasificacion de la caja
+        elif self.Existe_caja == 0: #Si no existe la caja se ejecuta esta funcion y se muestra un mensaje de alerta
             print("No existe Caja")
             self.label_estado.config(text="NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO")  # Actualiza el texto del Label
-            funciones_complementarias.Enviar_atributos("Robot","Inicio",False)
+            funciones_complementarias.publish_message("robot/estado", "FALSE")
             messagebox.showwarning("Advertencia", "NO EXISTE CAJA PARA INICIAR EL PROCESO, PONGA UNA CAJA Y LUEGO PRESIONE INICIO", icon="warning", parent=self.master)
             
         
 #Funcion para identificar los arucos y buscar el aruvo objetivo a ser buscado
+
     def Aruco(self, Buscar):
         marker_size = 100
         # Obtener el diccionario de marcadores ArUco y los parámetros del detector
-        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_50)
-        aruco_params = cv2.aruco.DetectorParameters()
-        cap = cv2.VideoCapture(0) # Iniciar captura desde la cámara (cambiar el número si tienes varias cámaras)
+        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
+        parameters = cv2.aruco.DetectorParameters()
+        aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+        # cap = cv2.VideoCapture(0) # Iniciar captura desde la cámara (cambiar el número si tienes varias cámaras)
+        rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+        cap = cv2.VideoCapture(rtsp_url)
         detected_ids = set()  # Usamos un conjunto para evitar duplicados de IDs detectados
+        
 
         while True:
             ret, frame = cap.read()  # Leer un fotograma de la cámara
@@ -134,7 +215,9 @@ class VentanaAutomatico:
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # Detectar los marcadores ArUco en el fotograma
-            marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(gray_frame, aruco_dict, parameters=aruco_params)
+            # marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(gray_frame, aruco_dict, parameters=aruco_params)
+
+            marker_corners, marker_ids, _ = aruco_detector.detectMarkers(gray_frame)
         
             # Verificar si se detectaron marcadores
             if marker_ids is not None:
@@ -155,7 +238,7 @@ class VentanaAutomatico:
                             # Enviar la cadena JSON a Arduino a través del puerto serie
                             self.serialArduino.write(json_data.encode())
                             time.sleep(1)
-                            self.serialArduino.close() # Cerramos el envio de datos bluetooth
+                            # self.serialArduino.close() # Cerramos el envio de datos bluetooth
                             time.sleep(0.5)
                             cap.release() 
                             cv2.destroyAllWindows()
@@ -182,6 +265,46 @@ class VentanaAutomatico:
         cap.release()
         cv2.destroyAllWindows()
 
+    
+
+    def GirarPor(self, direccion, tiempo):
+        print(f"Girando en dirección {direccion} por {tiempo} segundos...")
+        data = {
+            "Modo" : "Auto",
+            "Dato_movimiento": direccion,
+            "Dato_velocidad": tiempo
+        }
+        # Convertir el diccionario a una cadena JSON
+        try:
+            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
+            # Enviar la cadena JSON a Arduino a través del puerto serie
+            self.serialArduino.write(json_data.encode())
+            print("Datos enviados a Arduino:", json_data)
+        except Exception as e:
+            print(f"Error al enviar datos a Arduino: {e}")
+        pass
+        time.sleep(tiempo)
+
+    def MoverPor(self, velocidad, tiempo):
+        print(f"Girando a velocidad {velocidad} por {tiempo} segundos...")
+        data = {
+            "Modo" : "Auto",
+            "Dato_movimiento": "MoverPor",
+            "Dato_velocidad": velocidad,
+            "Dato_tiempo": tiempo
+            }
+        # Convertir el diccionario a una cadena JSON
+        try:
+            json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
+            # Enviar la cadena JSON a Arduino a través del puerto serie
+            self.serialArduino.write(json_data.encode())
+            print("Datos enviados a Arduino:", json_data)
+        except Exception as e:
+            print(f"Error al enviar datos a Arduino: {e}")
+        pass
+        time.sleep(tiempo)
+
+
     def Girar(self):
         print("Girando........")
         data = {
@@ -192,7 +315,55 @@ class VentanaAutomatico:
         # Convertir el diccionario a una cadena JSON
         json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea
         # Enviar la cadena JSON a Arduino a través del puerto serie
+        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
         self.serialArduino.write(json_data.encode())
+        pass
+
+    def CogerCarga(self):
+        data = {
+            "Modo" : "Manual",
+            "Dato_movimiento": "Coger_Carga",
+            "Dato_velocidad": self.velocidad
+            }
+        # Convertir el diccionario a una cadena JSON
+        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
+        print(f"Enviando datos a Arduino: {json_data}")
+        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        time.sleep(0.5)
+        # Enviar la cadena JSON a Arduino a través del puerto serie
+        self.serialArduino.write(json_data.encode('utf-8'))
+        time.sleep(0.5)
+        pass
+
+    def DejarCarga(self):
+        data = {
+            "Modo" : "Manual",
+            "Dato_movimiento": "Dejar_Carga",
+            "Dato_velocidad": self.velocidad
+            }
+        # Convertir el diccionario a una cadena JSON
+        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
+        print(f"Enviando datos a Arduino: {json_data}")
+        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        time.sleep(0.5)
+        # Enviar la cadena JSON a Arduino a través del puerto serie
+        self.serialArduino.write(json_data.encode('utf-8'))
+        time.sleep(0.5)
+        pass
+
+    def ir_piso(self, piso_valor):
+        # Configurar los datos a enviar
+        data = {
+            "Modo": "Manual",
+            "Dato_movimiento": "Ir_Piso",
+            "Dato_velocidad": piso_valor  # Aquí se debe colocar el valor del piso, por ejemplo, "PISO A1"
+        }
+        # Convertir el diccionario a una cadena JSON
+        json_data = json.dumps(data) + '\n'  # Agrega un terminador de línea 
+        print(f"Enviando datos a Arduino: {json_data}")
+        # Enviar la cadena JSON a Arduino a través del puerto serie
+        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+        self.serialArduino.write(json_data.encode('utf-8'))
         pass
 
 ########################################################## MODO MANUAL ################################################################################
@@ -211,6 +382,8 @@ class VentanaManual:
 
         # Aquí colocas el código para la ventana de modo manual
         # self.serialArduino = serial.Serial("COM7", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+
         self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         print("Ventana de Modo Manual Iniciada")
         master.title("Ventana de Modo Manual Iniciada")
@@ -763,13 +936,13 @@ class VentanaManual:
 
         try:
             if self.valor0.get() == self.camaras[1]:
-                ip_cam_url = "http://192.168.255.85/640x480.mjpeg"
+                ip_cam_url = "http://192.168.11.85/640x480.mjpeg"
                 self.stream_active.set()  # Marca el stream como activo
                 self.stream_thread = threading.Thread(target=self.stream_video, args=(ip_cam_url,))
                 self.stream_thread.start()
 
             elif self.valor0.get() == self.camaras[2]:
-                rtsp_url = "rtsp://admin:L28E4E11@192.168.255.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+                rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
                 self.cap = cv2.VideoCapture(rtsp_url)
 
                 if self.cap.isOpened():

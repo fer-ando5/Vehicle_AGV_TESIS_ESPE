@@ -4,11 +4,11 @@ import numpy as np
 
 
 # Read in the saved objpoints and imgpoints
-cameraMatrix, dist = pickle.load(open( "Calibracion//calibration.pkl", "rb" ))
+cameraMatrix, dist = pickle.load(open( "Calibracion/calibration.pkl", "rb" ))
 #dist_pickle = pickle.load( open( "wide_dist_pickle.p", "rb" ) )
 
 # Read in an image
-img = cv2.imread('Calibracion//cal5.png')
+img = cv2.imread('Calibracion/image43.png')
 h,  w = img.shape[:2]
 newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w,h), 1, (w,h))
 

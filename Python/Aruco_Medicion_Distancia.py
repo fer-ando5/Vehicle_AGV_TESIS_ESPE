@@ -11,8 +11,11 @@ import socket
 import time
 import json
 import serial
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO)
+
+counter = 0
 
 # Funcion para calculas la estimacion de la distancia con respecto del aruco y la camara, se envia el ID objetivo
 #ID objetivo corresponde al que vamos a buscar
@@ -44,26 +47,41 @@ def Estimation(ID_Objetivo):
         return np.array([x, y, z])  # Devolver ángulos de Euler como un array
 
     marker_size = 100  # Tamaño del marcador ArUco
-    camera_matrix = np.array([[4.949065755680331904e+02,0.000000000000000000e+00,3.219298146850781563e+02],
-                              [0.000000000000000000e+00,4.928480549415890550e+02,2.346512865763718310e+02],
-                              [0.000000000000000000e+00,0.000000000000000000e+00,1.000000000000000000e+00]]) 
-    camera_distortion = np.array([[1.099028777366317100e-01,
-                                   -5.404175609526782331e-01,
-                                   1.212558112305444757e-03,
-                                   1.456590138562988785e-03,
-                                   .735066521572598663e-01]])  
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_50)  # Definir diccionario de marcadores ArUco
-    cap = cv2.VideoCapture(0)  # Inicializar captura de vídeo desde la dirección
+    camera_matrix = np.array([[2.87862314e+03, 0.00000000e+00, 3.97162762e+02],
+                              [0.00000000e+00, 2.93745112e+03, 3.28968294e+02],
+                              [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]) 
+    camera_distortion = np.array([[ -3.27351501e+00,
+                                    -1.10536770e+00,
+                                    -3.95697951e-04,
+                                    2.11258089e-01,
+                                    2.53503977e+01]])  
+    # aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_50)  # Definir diccionario de marcadores ArUco
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
+    parameters = cv2.aruco.DetectorParameters()
+    aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+
+    # cap = cv2.VideoCapture(0)  # Inicializar captura de vídeo desde la dirección
+    rtsp_url = "rtsp://admin:L28E4E11@192.168.192.44:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+    cap = cv2.VideoCapture(rtsp_url)  # Inicializa la captura desde la cámara RTSP
     cap.set(3, 640)  # Establecer el ancho del fotograma de la cámara
     cap.set(4, 480)  # Establecer el alto del fotograma de la cámara
+    pid = PIDController(0.01, 0.01, 0.1 , 200, 0)
+    counter = 0
+    Posicionado = False
+    Acercado = False
+    # Uso de la clase FiltroDatos
+    filtro = FiltroDatos()
+    
+
     while True:  # Bucle infinito para capturar y procesar los fotogramas
-        cap.open(0)  # Abrir la captura de vídeo desde la dirección
+        
+        cap = cv2.VideoCapture(rtsp_url)
         ret, frame = cap.read()  # Leer un fotograma del vídeo
         if not ret:  # Verificar si la lectura del fotograma fue exitosa
             break  # Salir del bucle si la lectura no fue exitosa
 
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convertir el fotograma a escala de grises
-        corners, ids, rejected = cv2.aruco.detectMarkers(gray_frame, aruco_dict, camera_matrix, camera_distortion)  # Detectar marcadores ArUco
+        corners, ids, rejected = aruco_detector.detectMarkers(gray_frame)  # Detectar marcadores ArUco
 
         # Verificar si se detectaron marcadores y si el ID objetivo está en la lista de IDs
         if ids is not None and ID_Objetivo in ids:
@@ -76,9 +94,9 @@ def Estimation(ID_Objetivo):
             # Dibujar los marcadores detectados en el fotograma
             cv2.aruco.drawDetectedMarkers(frame, corners)
             # Estimar la pose del marcador objetivo
-            rvec_list_all, tvec_list_all, _objPoints = cv2.aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix, camera_distortion)
-            rvec = rvec_list_all[0][0]
-            tvec = tvec_list_all[0][0]
+            rvec_list_all, tvec_list_all, _objPoints = my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, camera_distortion)
+            rvec = rvec_list_all[0]
+            tvec = tvec_list_all[0]
             # Dibujar ejes de coordenadas en el marcador objetivo
             cv2.drawFrameAxes(frame, camera_matrix, camera_distortion, rvec, tvec, 100)
             rvec_flipped = rvec * -1
@@ -87,27 +105,46 @@ def Estimation(ID_Objetivo):
             realworld_tvec = np.dot(rotation_matrix, tvec_flipped)
             pitch, roll, yaw = rotationMatrixToEulerAngles(rotation_matrix)
             #Agregar las coordenadas y el ángulo a la lista
-            x = round(realworld_tvec[0],3)
-            y = round(realworld_tvec[1],3)
-            z = round(realworld_tvec[2],3)
-            theta = round(math.degrees(roll),3)
+            x = round(realworld_tvec[0, 0], 3)  # Redondea el valor de la primera fila
+            y = round(realworld_tvec[1, 0], 3)  # Redondea el valor de la segunda fila
+            z = round(realworld_tvec[2, 0], 3)  # Redondea el valor de la tercera fila
+            yaw = round(math.degrees(yaw),3)
            # Imprimir las coordenadas formateadas
-            coordenadas = [x, y, z, theta] #guardamos en coordanadas los datos en una lista
+            print("ENCONTRADO")
+            # print(x)
+            # print(y)
+            # print(z)
+            # print(theta)
+            x_filtrado, y_filtrado, z_filtrado, yaw_filtrado = filtro.filtrar_datos(x, y, z, yaw)
+            print(f"Filtrado: x={x_filtrado}, y={y_filtrado}, z={z_filtrado}, yaw={yaw_filtrado}")
+
+            if Posicionado == False:
+                pid.Conectar_Blu_Auto()
+                Posicionado = pid.Posicionamiento(x_filtrado, yaw_filtrado)
+
+            if Acercado == False:
+                pid.Conectar_Blu_Auto()
+                Acercado = pid.AvanzarHasta(10)
+
+            # coordenadas = [x, y, z, yaw] #guardamos en coordanadas los datos en una lista
             
-            pid = PIDController(0.01, 0.01, 0.1 , 200, 0)
-            inicio = False
-            if inicio == False:
-                pid.Conectar_Blu_Auto() #ejecutamos la funcion para conectar el bluetooth
+            # inicio = False
+            # if inicio == False:
+                # print("CONECTANDO A BLUETOOTH")
+                # pid.Conectar_Blu_Auto() #ejecutamos la funcion para conectar el bluetooth
 
-            #Extraemos las velocidades, ingresando las distancias en Z, X y angulo
-            velocidad_Z = pid.compute_Z(int(coordenadas[2]))
-            velocidad_X = pid.compute_X(int(coordenadas[0]))
-            angulo = pid.compute_Angulo(int(coordenadas[3]))
-            print("Datos sensados: ",velocidad_X, velocidad_Z, angulo) #Bandera para verificacion de datos computados
+            # #Extraemos las velocidades, ingresando las distancias en Z, X y angulo
+            # velocidad_Z = pid.compute_Z(int(coordenadas[2]))
+            # velocidad_X = pid.compute_X(int(coordenadas[0]))
+            # angulo = pid.compute_Angulo(int(coordenadas[3]))
+            # print("Datos sensados: ",velocidad_X, velocidad_Z, angulo) #Bandera para verificacion de datos computados
 
-            pid.Matriz_transformacion_Motores(velocidad_X, velocidad_Z,angulo) #Envio para transformar las velocidades delantera, frontal y angular a la velocidad para cada rueda
+            #NO OLVIDES ESTO
+            # pid.Matriz_transformacion_Motores(velocidad_X, velocidad_Z,angulo) #Envio para transformar las velocidades delantera, frontal y angular a la velocidad para cada rueda
 
-            tvec_str = "P x=%2.0f y=%2.0f  z=%2.0f O =%2.0f" % (realworld_tvec[0], realworld_tvec[1],realworld_tvec[2], math.degrees(roll))
+            # tvec_str = "P x=%2.0f y=%2.0f  z=%2.0f p =%2.0f r =%2.0f y =%2.0f" % (realworld_tvec[0], realworld_tvec[1],realworld_tvec[2], math.degrees(pitch), math.degrees(roll),math.degrees(yaw))
+
+            tvec_str = "P x=%2.0f y=%2.0f  z=%2.0f y =%2.0f" % (x_filtrado, y_filtrado, z_filtrado, yaw_filtrado)
             cv2.putText(frame, tvec_str, (20, 460), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2, cv2.LINE_AA)
         # Crear una ventana con el nombre 'DETECCION DE ARUCO'
         cv2.namedWindow('DETECCION DE ARUCO')
@@ -125,16 +162,85 @@ def Estimation(ID_Objetivo):
         key = cv2.waitKey(3) & 0xFF  # Esperar 1 milisegundo para la entrada del teclado
         
         ###### Regla para que salga de la funcion cuando se cumpla que la distancia es Z es menor a 200 y en X menor a 10 
-        if coordenadas[2] <= 200 and abs(coordenadas[0]) <= 10:
-            print("Entro en el if")
-            pid.Matriz_transformacion_Motores(0,0,0) #Envio de velocidades en 0 para que se detenga el robot
-            time.sleep(1) #Tiempo para la escritura
+        # if coordenadas[2] <= 200 and abs(coordenadas[0]) <= 10:
+        #     print("Entro en el if")
+        #     pid.Matriz_transformacion_Motores(0,0,0) #Envio de velocidades en 0 para que se detenga el robot
+        #     time.sleep(1) #Tiempo para la escritura
+        #     cap.release()  # Liberar la captura de vídeo
+        #     cv2.destroyAllWindows()  # Cerrar todas las ventanas
+        #     bandera_FIN_PID = 1 # Envio 1 en fin bandera para saber que se termino este proceso y publicar en thingsboard
+        #     return bandera_FIN_PID
+
+        if Posicionado == True and Posicionado == True:
+            Posicionado = False
+            Acercado = False
+            print("MOVIMIENTO DE POSICION FINALIZADO")
             cap.release()  # Liberar la captura de vídeo
             cv2.destroyAllWindows()  # Cerrar todas las ventanas
             bandera_FIN_PID = 1 # Envio 1 en fin bandera para saber que se termino este proceso y publicar en thingsboard
-            return bandera_FIN_PID
+            return 
+            break
+
+
     cap.release()  # Liberar la captura de vídeo
     cv2.destroyAllWindows()  # Cerrar todas las ventanas
+
+
+def my_estimatePoseSingleMarkers(corners, marker_size, mtx, distortion):
+    '''
+    This will estimate the rvec and tvec for each of the marker corners detected by:
+       corners, ids, rejectedImgPoints = detector.detectMarkers(image)
+    corners - is an array of detected corners for each detected marker in the image
+    marker_size - is the size of the detected markers
+    mtx - is the camera matrix
+    distortion - is the camera distortion matrix
+    RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
+    '''
+    marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
+                              [marker_size / 2, marker_size / 2, 0],
+                              [marker_size / 2, -marker_size / 2, 0],
+                              [-marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)
+    trash = []
+    rvecs = []
+    tvecs = []
+    
+    for c in corners:
+        nada, R, t = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_IPPE_SQUARE)
+        rvecs.append(R)
+        tvecs.append(t)
+        trash.append(nada)
+    return rvecs, tvecs, trash
+
+
+class FiltroDatos:
+    def __init__(self, umbral=500):
+        self.historico_x = []
+        self.historico_y = []
+        self.historico_z = []
+        self.historico_theta = []
+        self.umbral = umbral
+
+    def agregar_dato(self, dato, historico):
+        dato = round(dato)  # Redondear el dato a un entero sin decimales
+        
+        if len(historico) > 0:
+            penultimo_dato = historico[-1]
+            if abs(dato - penultimo_dato) > self.umbral:
+                return np.mean(historico)  # Retornar la media de los datos sin agregar el nuevo dato si supera el umbral
+        
+        if len(historico) >= 5:
+            historico.pop(0)
+        
+        historico.append(dato)
+        return np.mean(historico)  # Retornar la media de los datos
+
+    def filtrar_datos(self, x, y, z, theta):
+        x_filtrado = self.agregar_dato(x, self.historico_x)
+        y_filtrado = self.agregar_dato(y, self.historico_y)
+        z_filtrado = self.agregar_dato(z, self.historico_z)
+        theta_filtrado = self.agregar_dato(theta, self.historico_theta)
+        return round(x_filtrado), round(y_filtrado), round(z_filtrado), round(theta_filtrado)
+
 
 
 class PIDController:
@@ -148,9 +254,9 @@ class PIDController:
         self.integral_Z = self.integral_X = 0
 
 
-        self.mqtt_broker = "192.168.0.86"  # Cambiar a la dirección IP del servidor de thingsboard
-        self.mqtt_port = 1883 #puerto de envio de datos para Mqtt
-        self.mqtt_topic = "v1/devices/me/telemetry"  
+        # self.mqtt_broker = "192.168.11.34"  # Cambiar a la dirección IP del servidor de thingsboard
+        # self.mqtt_port = 1883 #puerto de envio de datos para Mqtt
+        # self.mqtt_topic = "v1/devices/me/telemetry"  
 
 
     #Funcion para detemerinar la velocidad del angulo en funcion de que tan lejos esta del angulo que buscamos (PID Rustico)
@@ -245,29 +351,216 @@ class PIDController:
         print("Valor de W2:", self.W2)
         print("Valor de W3:", self.W3)
         print("Valor de W4:", self.W4)
+        print("AQUI SE ENVIA A LOS MOTORES")
 
+        # NO OLVIDES DESCOMENTAR ESTO
         self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
-
-    #Funcion de envio de datos mediante bluetooth
-    def Enviar_arduino_blu(self):
-        #data corresponde a un diccionario
-        data = {
-            "Modo" : "Auto",
-            "m1_vel": self.W1,
-            "m2_vel": self.W2,
-            "m3_vel": self.W3,
-            "m4_vel": self.W4,
-            }
-        # Convertir el diccionario a una cadena JSON
-        json_data = json.dumps(data)
-        # Enviar la cadena JSON a Arduino a través del puerto serie
-        self.serialArduino.write(json_data.encode())
-        time.sleep(0.5)
-        pass
     
     #Funcion para concetar bluetooth mediante el puerto bluetooth de mi pc
     def Conectar_Blu_Auto(self):
-        self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        # self.serialArduino = serial.Serial("COM12", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
+        self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)  # Reemplaza 'COM1' por el puerto serie correspondiente
         inicio = True
         return inicio
         pass
+    
+    def Posicionamiento(self, x_, yaw_a):
+        # Validación y ajuste de yaw
+        if abs(yaw_a) > 15:
+            direccion_giro = "Horario" if x_ > 0 else "AntiHorario"
+            print(f"Girando {direccion_giro} para ajustar yaw")
+            self.GiroRobot(direccion_giro, 50)
+            return False  # Yaw no está ajustado aún
+
+        # Solo validar y ajustar x si la validación de yaw es positiva
+        if abs(yaw_a) <= 15:
+            # Validación y ajuste de x
+            if abs(x_) > 200:
+                direccion_desplazar = "Izquierda" if x_ > 0 else "Derecha"
+                print(f"Desplazando hacia {direccion_desplazar} para ajustar posición en x")
+                self.Desplazar(direccion_desplazar, 100)
+                return False  # Posición en x no está ajustada aún
+
+        # Si ambas condiciones se cumplen, regresar True
+        print("Posicionamiento completado correctamente")
+        return True
+
+    def GiroRobot(self, Direccion, Velocidad):
+            if Direccion == "Horario":
+                print("GIRO HORARIO")
+                self.W1 = Velocidad
+                self.W2 = -Velocidad
+                self.W3 = Velocidad
+                self.W4 = -Velocidad
+            elif Direccion == "AntiHorario":
+
+                print("GIRO ANTIHORARIO")
+                self.W1 = -Velocidad
+                self.W2 = Velocidad
+                self.W3 = -Velocidad
+                self.W4 = Velocidad
+            else:
+                print("Dirección no válida. Use 'Horario' o 'AntiHorario'.")
+                return
+
+            # Imprimir los valores de las variables individuales para ver qué sale
+            print("Valor de W1:", self.W1)
+            print("Valor de W2:", self.W2)
+            print("Valor de W3:", self.W3)
+            print("Valor de W4:", self.W4)
+            print("AQUI SE ENVIA A LOS MOTORES")
+            
+            # Aquí debes agregar la lógica para enviar los valores a los motores
+            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+
+    def GiroRobotTime(self, Direccion, Velocidad, Duracion):
+            if Direccion == "Horario":
+                print("GIRO HORARIO")
+                self.W1 = Velocidad
+                self.W2 = -Velocidad
+                self.W3 = Velocidad
+                self.W4 = -Velocidad
+            elif Direccion == "AntiHorario":
+
+                print("GIRO ANTIHORARIO")
+                self.W1 = -Velocidad
+                self.W2 = Velocidad
+                self.W3 = -Velocidad
+                self.W4 = Velocidad
+            else:
+                print("Dirección no válida. Use 'Horario' o 'AntiHorario'.")
+                return
+
+            # Imprimir los valores de las variables individuales para ver qué sale
+            print("Valor de W1:", self.W1)
+            print("Valor de W2:", self.W2)
+            print("Valor de W3:", self.W3)
+            print("Valor de W4:", self.W4)
+            print("AQUI SE ENVIA A LOS MOTORES")
+
+            time.sleep(Duracion)
+            
+            # Aquí debes agregar la lógica para enviar los valores a los motores
+            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+
+            self.W1 = 0
+            self.W2 = 0
+            self.W3 = 0
+            self.W4 = 0
+
+
+            # Imprimir los valores de las variables individuales para ver qué sale
+            print("Valor de W1:", self.W1)
+            print("Valor de W2:", self.W2)
+            print("Valor de W3:", self.W3)
+            print("Valor de W4:", self.W4)
+            print("AQUI SE ENVIA A LOS MOTORES")
+            
+            # Aquí debes agregar la lógica para enviar los valores a los motores
+            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+
+
+    def Avanzar(self, Direccion, Velocidad):
+            if Direccion == "Adelante":
+                print("AVANZAR ADELANTE")
+                self.W1 = Velocidad
+                self.W2 = Velocidad
+                self.W3 = Velocidad
+                self.W4 = Velocidad
+            elif Direccion == "Atras":
+                print("AVANZAR ATRAS")
+                self.W1 = -Velocidad
+                self.W2 = -Velocidad
+                self.W3 = -Velocidad
+                self.W4 = -Velocidad
+            else:
+                print("Dirección no válida. Use 'Adelante' o 'Atras'.")
+                return
+
+            # Imprimir los valores de las variables individuales para ver qué sale
+            print("Valor de W1:", self.W1)
+            print("Valor de W2:", self.W2)
+            print("Valor de W3:", self.W3)
+            print("Valor de W4:", self.W4)
+            print("AQUI SE ENVIA A LOS MOTORES")
+            
+            # Aquí debes agregar la lógica para enviar los valores a los motores
+            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+
+    def Desplazar(self, Direccion, Velocidad):
+            if Direccion == "Derecha":
+                print("DESPLAZAR DERECHA")
+                self.W1 = Velocidad
+                self.W2 = -Velocidad
+                self.W3 = -Velocidad
+                self.W4 = Velocidad
+            elif Direccion == "Izquierda":
+                print("DESPLAZAR IZQUIERDA")
+                self.W1 = -Velocidad
+                self.W2 = Velocidad
+                self.W3 = Velocidad
+                self.W4 = -Velocidad
+            else:
+                print("Dirección no válida. Use 'Derecha' o 'Izquierda'.")
+                return
+
+            # Imprimir los valores de las variables individuales para ver qué sale
+            
+            print("Valor de W1:", self.W1)
+            print("Valor de W2:", self.W2)
+            print("Valor de W3:", self.W3)
+            print("Valor de W4:", self.W4)
+            print("AQUI SE ENVIA A LOS MOTORES")
+            
+            # Aquí debes agregar la lógica para enviar los valores a los motores
+            self.Enviar_arduino_blu() #funcion para envio de datos por bluetooth
+
+
+        
+    def AvanzarHasta(self, posicion):
+            # Imprime la posición a la que se debe avanzar
+            print(f"Avanzar hasta la posición {posicion}")
+            
+            # Llama a la función para enviar datos por Bluetooth
+            # Suponiendo que 'Funcion' es 'Avanzar' y 'Param' es 'posicion'
+            self.Enviar_arduino_blu2(Funcion='Avanzar', Param=posicion)
+            
+            # Si ambas condiciones se cumplen, regresar True    
+            print("Posicionamiento completado correctamente")
+            return True
+        
+
+        
+        #Funcion de envio de datos mediante bluetooth
+    def Enviar_arduino_blu(self):
+            #data corresponde a un diccionario
+            data = {
+                "Modo" : "Auto",
+                "m1_vel": self.W1,
+                "m2_vel": self.W2,
+                "m3_vel": self.W3,
+                "m4_vel": self.W4,
+                }
+            # Convertir el diccionario a una cadena JSON
+            json_data = json.dumps(data)
+            # Enviar la cadena JSON a Arduino a través del puerto serie
+            self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+            self.serialArduino.write(json_data.encode())
+            time.sleep(0.5)
+            pass
+
+    def Enviar_arduino_blu2(self, Funcion, Param):
+            #data corresponde a un diccionario
+            data = {
+                "Modo" : "Auto",
+                "Dato_movimiento": Funcion,
+                "Dato_velocidad": Param
+                }
+            # Convertir el diccionario a una cadena JSON
+            json_data = json.dumps(data)
+            # Enviar la cadena JSON a Arduino a través del puerto serie
+            self.serialArduino = serial.Serial("/dev/cu.HC-05", 115200)
+            self.serialArduino.write(json_data.encode())
+            time.sleep(0.5)
+            pass
+

@@ -20,7 +20,7 @@ class App:
 
         # URL de la cámara IP
         # self.video_source = 'http://192.168.0.85/640x480.jpg'
-        self.video_source = 'http://192.168.255.85/640x480.jpg'
+        self.video_source = 'http://192.168.11.85/640x480.jpg'
 
         # Tamaño deseado del lienzo
         self.canvas_width = 800
