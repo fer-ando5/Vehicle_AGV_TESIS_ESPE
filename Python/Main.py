@@ -1238,8 +1238,8 @@ def centrar_ventana(ventana,ancho,largo):
 
 # Crear la ventana principal
 ventana = tk.Tk()
-ventana.overrideredirect(True)
-#ventana.title("Ventana de Inicio")
+#ventana.overrideredirect(True)
+ventana.title("Ventana de Inicio")
 # Cambiar el color de fondo de la ventana
 w,h = ventana.winfo_screenwidth(), ventana.winfo_screenheight()
 ventana.geometry("%dx%d+0+0"%(w,h))
