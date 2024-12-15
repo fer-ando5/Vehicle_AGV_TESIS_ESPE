@@ -1246,7 +1246,7 @@ ventana.geometry("%dx%d+0+0"%(w,h))
 ventana.resizable(width=0,height=0)
 centrar_ventana(ventana,700,500)
 # Configurar la cuadrícula de la ventana principal
-ventana.rowconfigure(0, weight=8)  # Fila superior
+ventana.rowconfigure(0, weight=8)  # Fila superio
 ventana.rowconfigure(1, weight=0)  # Fila inferior
 ventana.columnconfigure(0, weight=1)  # Única columna
 
